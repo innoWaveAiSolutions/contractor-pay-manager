@@ -3,23 +3,21 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Eye, EyeOff, ArrowRight } from 'lucide-react';
 import { CustomButton } from '@/components/ui/custom-button';
+import { useAuth } from '@/contexts/AuthContext';
 
 const LoginForm = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const { login, isLoading } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // In a real app, this would connect to an authentication service
-    setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
-      // Simulate a successful login and redirect
-      window.location.href = '/dashboard';
-    }, 1500);
+    try {
+      await login(email, password);
+    } catch (error) {
+      console.error('Login failed:', error);
+    }
   };
 
   return (
@@ -27,6 +25,16 @@ const LoginForm = () => {
       <div className="text-center space-y-2">
         <h1 className="text-2xl font-semibold tracking-tight">Welcome back</h1>
         <p className="text-muted-foreground">Enter your credentials to sign in to your account</p>
+        <div className="pt-2 text-xs text-muted-foreground">
+          <p className="mb-1">For demo, use an email that includes:</p>
+          <ul className="space-y-1">
+            <li><strong>director@example.com</strong>: For Director role</li>
+            <li><strong>pm@example.com</strong>: For Project Manager role</li>
+            <li><strong>reviewer@example.com</strong>: For Reviewer role</li>
+            <li><strong>contractor@example.com</strong>: For Contractor role</li>
+            <li>Any password will work</li>
+          </ul>
+        </div>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">

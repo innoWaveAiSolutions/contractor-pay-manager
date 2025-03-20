@@ -1,97 +1,124 @@
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { FileText, Briefcase, Users, AlertCircle, Plus } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Briefcase, FileText, Users, AlertCircle, Plus, Building } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { useApi } from '@/hooks/use-api';
 import Sidebar from '@/components/layout/Sidebar';
 import DashboardCard from '@/components/dashboard/DashboardCard';
 import ProjectsList from '@/components/dashboard/ProjectsList';
 import { CustomButton } from '@/components/ui/custom-button';
-
-// Mock stats data for PM dashboard
-const pmStats = [
-  {
-    title: 'Active Projects',
-    value: '12',
-    icon: <Briefcase size={20} />,
-    color: 'text-primary',
-  },
-  {
-    title: 'Contractors',
-    value: '36',
-    icon: <Users size={20} />,
-    color: 'text-primary',
-  },
-  {
-    title: 'Pay Applications',
-    value: '24',
-    icon: <FileText size={20} />,
-    color: 'text-primary',
-  },
-  {
-    title: 'Pending Reviews',
-    value: '7',
-    icon: <AlertCircle size={20} />,
-    color: 'text-amber-500',
-  },
-];
+import NewProjectModal from '@/components/projects/NewProjectModal';
+import InviteTeamModal from '@/components/team/InviteTeamModal';
 
 const Dashboard = () => {
-  const [userRole, setUserRole] = useState<'pm' | 'contractor' | 'reviewer' | 'director'>('pm');
+  const { user } = useAuth();
+  const { getDashboardStatistics, getProjects } = useApi();
+  const [stats, setStats] = useState<any[]>([]);
+  const [projects, setProjects] = useState<any[]>([]);
+  const [isLoadingProjects, setIsLoadingProjects] = useState(true);
+  const [isNewProjectModalOpen, setIsNewProjectModalOpen] = useState(false);
+  const [isInviteTeamModalOpen, setIsInviteTeamModalOpen] = useState(false);
 
-  // Simulate changing roles (for demo purposes)
-  const handleRoleChange = (role: 'pm' | 'contractor' | 'reviewer' | 'director') => {
-    setUserRole(role);
+  useEffect(() => {
+    if (user) {
+      // Get dashboard statistics
+      setStats(getDashboardStatistics());
+      
+      // Fetch projects
+      const fetchProjects = async () => {
+        try {
+          setIsLoadingProjects(true);
+          const projectsData = await getProjects();
+          setProjects(projectsData);
+        } catch (error) {
+          console.error('Error fetching projects:', error);
+        } finally {
+          setIsLoadingProjects(false);
+        }
+      };
+      
+      fetchProjects();
+    }
+  }, [user]);
+
+  // Map lucide icons to dashboard cards
+  const getIconForStat = (title: string) => {
+    switch (title) {
+      case 'Active Projects':
+        return <Briefcase size={20} />;
+      case 'Contractors':
+      case 'Organization Members':
+        return <Users size={20} />;
+      case 'Pay Applications':
+      case 'Submitted Applications':
+      case 'Approved Applications':
+        return <FileText size={20} />;
+      case 'Pending Reviews':
+      case 'Changes Requested':
+        return <AlertCircle size={20} />;
+      case 'Assigned Projects':
+        return <Briefcase size={20} />;
+      default:
+        return <Building size={20} />;
+    }
   };
 
   return (
     <div className="min-h-screen bg-background">
-      <Sidebar userRole={userRole} />
+      <Sidebar userRole={user?.role || 'pm'} />
       
       <main className="pt-16 pb-12 pl-0 md:pl-20 lg:pl-64">
         <div className="px-6 md:px-8 max-w-6xl mx-auto">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
             <div>
               <h1 className="text-2xl md:text-3xl font-bold">Dashboard</h1>
-              <p className="text-muted-foreground mt-1">Welcome back, Alex</p>
+              <p className="text-muted-foreground mt-1">Welcome back, {user?.name || 'User'}</p>
             </div>
 
-            {/* Role switcher (just for demo) */}
             <div className="flex items-center gap-2 text-sm">
-              <span className="text-muted-foreground">Role:</span>
-              <select 
-                value={userRole}
-                onChange={(e) => handleRoleChange(e.target.value as any)}
-                className="px-2 py-1 border border-input rounded-md bg-background"
-              >
-                <option value="pm">Project Manager</option>
-                <option value="contractor">Contractor</option>
-                <option value="reviewer">Reviewer</option>
-                <option value="director">Director</option>
-              </select>
+              <span className="text-muted-foreground">Organization:</span>
+              <span className="font-medium">{user?.organizationName || 'Not Assigned'}</span>
             </div>
           </div>
 
           {/* Dashboard Stats */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            {pmStats.map((stat, index) => (
-              <DashboardCard
+            {stats.map((stat, index) => (
+              <Link
                 key={stat.title}
-                title={stat.title}
-                value={stat.value}
-                icon={stat.icon}
-                index={index}
-              />
+                to={
+                  stat.title === 'Active Projects' ? '/projects' :
+                  stat.title === 'Contractors' || stat.title === 'Organization Members' ? '/team' :
+                  stat.title === 'Pay Applications' || 
+                  stat.title === 'Submitted Applications' || 
+                  stat.title === 'Pending Reviews' ? '/applications' :
+                  '#'
+                }
+              >
+                <DashboardCard
+                  title={stat.title}
+                  value={stat.value}
+                  icon={getIconForStat(stat.title)}
+                  index={index}
+                />
+              </Link>
             ))}
           </div>
 
           {/* Quick Actions */}
           <div className="flex flex-wrap gap-4 mb-8">
-            <CustomButton>
-              <Plus size={16} className="mr-2" /> New Project
-            </CustomButton>
-            <CustomButton variant="outline">
-              <Users size={16} className="mr-2" /> Invite Team Member
-            </CustomButton>
+            {(user?.role === 'pm' || user?.role === 'director') && (
+              <>
+                <CustomButton onClick={() => setIsNewProjectModalOpen(true)}>
+                  <Plus size={16} className="mr-2" /> New Project
+                </CustomButton>
+                <CustomButton variant="outline" onClick={() => setIsInviteTeamModalOpen(true)}>
+                  <Users size={16} className="mr-2" /> Invite Team Member
+                </CustomButton>
+              </>
+            )}
           </div>
 
           {/* Projects Section */}
@@ -102,12 +129,30 @@ const Dashboard = () => {
           >
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-semibold">Projects</h2>
-              <a href="/projects" className="text-sm text-primary hover:underline">View All</a>
+              <Link to="/projects" className="text-sm text-primary hover:underline">View All</Link>
             </div>
-            <ProjectsList />
+            
+            {isLoadingProjects ? (
+              <div className="flex justify-center py-12">
+                <div className="animate-spin h-8 w-8 border-4 border-primary rounded-full border-t-transparent"></div>
+              </div>
+            ) : (
+              <ProjectsList projects={projects.slice(0, 3)} />
+            )}
           </motion.div>
         </div>
       </main>
+
+      {/* Modals */}
+      <NewProjectModal 
+        isOpen={isNewProjectModalOpen} 
+        onClose={() => setIsNewProjectModalOpen(false)} 
+      />
+      
+      <InviteTeamModal 
+        isOpen={isInviteTeamModalOpen} 
+        onClose={() => setIsInviteTeamModalOpen(false)} 
+      />
     </div>
   );
 };

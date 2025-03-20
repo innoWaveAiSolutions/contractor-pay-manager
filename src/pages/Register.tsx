@@ -4,26 +4,30 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Eye, EyeOff, ArrowRight } from 'lucide-react';
 import { CustomButton } from '@/components/ui/custom-button';
+import { useAuth, UserRole } from '@/contexts/AuthContext';
 
 const Register = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [role, setRole] = useState('contractor');
+  const [role, setRole] = useState<UserRole>('contractor');
   const [showPassword, setShowPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const { register, isLoading } = useAuth();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // In a real app, this would connect to an authentication service
-    setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
-      // Simulate a successful registration and redirect
-      window.location.href = '/dashboard';
-    }, 1500);
+    if (password !== confirmPassword) {
+      alert('Passwords do not match');
+      return;
+    }
+    
+    try {
+      await register(name, email, password, role);
+    } catch (error) {
+      console.error('Registration failed:', error);
+    }
   };
 
   return (
@@ -94,12 +98,13 @@ const Register = () => {
               <select
                 id="role"
                 value={role}
-                onChange={(e) => setRole(e.target.value)}
+                onChange={(e) => setRole(e.target.value as UserRole)}
                 className="w-full px-4 py-2 border border-input rounded-lg bg-background input-focus"
               >
                 <option value="contractor">Contractor</option>
                 <option value="pm">Project Manager</option>
                 <option value="reviewer">Reviewer</option>
+                <option value="director">Director</option>
               </select>
             </div>
 

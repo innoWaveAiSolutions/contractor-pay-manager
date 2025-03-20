@@ -10,19 +10,25 @@ import {
   ChevronRight, 
   Menu, 
   X,
-  LogOut 
+  LogOut,
+  Building
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useAuth, UserRole } from '@/contexts/AuthContext';
 
 interface SidebarProps {
-  userRole?: 'pm' | 'contractor' | 'reviewer' | 'director';
+  userRole?: UserRole;
 }
 
 const Sidebar = ({ userRole = 'pm' }: SidebarProps) => {
   const [expanded, setExpanded] = useState(true);
   const isMobile = useIsMobile();
   const location = useLocation();
+  const { user } = useAuth();
+
+  // Use the authenticated user's role if available
+  const role = user?.role || userRole;
 
   useEffect(() => {
     if (isMobile) {
@@ -84,11 +90,12 @@ const Sidebar = ({ userRole = 'pm' }: SidebarProps) => {
       { icon: Home, href: '/dashboard', label: 'Dashboard' },
       { icon: Briefcase, href: '/projects', label: 'Projects' },
       { icon: FileText, href: '/applications', label: 'Applications' },
+      { icon: Building, href: '/organization', label: 'Organization' },
       { icon: Settings, href: '/settings', label: 'Settings' },
     ],
   };
 
-  const navItems = navItemsByRole[userRole] || navItemsByRole.pm;
+  const navItems = navItemsByRole[role] || navItemsByRole.pm;
 
   return (
     <>
