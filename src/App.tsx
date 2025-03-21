@@ -20,6 +20,7 @@ import PayApplicationDetails from "./pages/PayApplicationDetails";
 import Team from "./pages/Team";
 import Settings from "./pages/Settings";
 import Logout from "./pages/Logout";
+import Organization from "./pages/Organization";
 
 const queryClient = new QueryClient();
 
@@ -46,6 +47,7 @@ const App = () => (
                 <Route path="/applications" element={<PayApplications />} />
                 <Route path="/applications/:id" element={<PayApplicationDetails />} />
                 <Route path="/team" element={<Team />} />
+                <Route path="/organization" element={<Organization />} />
                 <Route path="/settings" element={<Settings />} />
               </Route>
 

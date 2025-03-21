@@ -1,183 +1,253 @@
 
 import { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowLeft, FileText, Check, X, ChevronDown, ChevronUp, Download } from 'lucide-react';
+import { Link, useParams } from 'react-router-dom';
+import { 
+  FileText, 
+  Download, 
+  Check, 
+  X, 
+  ArrowLeft, 
+  Clock, 
+  PlusCircle, 
+  Upload,
+  DollarSign
+} from 'lucide-react';
 import Sidebar from '@/components/layout/Sidebar';
-import { CustomButton } from '@/components/ui/custom-button';
 import { useAuth } from '@/contexts/AuthContext';
+import { useApi } from '@/hooks/use-api';
+import { CustomButton } from '@/components/ui/custom-button';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 
-// Mock line items for the pay application
+// Mock pay application data
 const mockLineItems = [
   {
     id: '1',
-    number: '1',
-    description: 'Site Preparation',
-    scheduledValue: 25000,
-    previouslyCompleted: 20000,
-    thisperiod: 5000,
-    storedMaterials: 0,
-    totalCompletedToDate: 25000,
-    percentageComplete: 100,
-    balanceToFinish: 0,
-    retainage: 1250,
+    itemNo: 'A-01',
+    description: 'Site Work & Excavation',
+    scheduledValue: '$45,000.00',
+    fromPreviousApplication: '$23,000.00',
+    thisPeriod: '$12,000.00',
+    materialsPresent: '$0.00',
+    totalCompleted: '$35,000.00',
+    percentage: '78%',
+    balanceToFinish: '$10,000.00',
+    retainage: '$3,500.00',
     expenses: [
       {
-        id: 'e1',
+        id: 'exp1',
         name: 'Equipment Rental',
-        amount: 3000,
-        date: '2023-06-05',
+        amount: '$5,200.00',
+        date: '2023-09-15',
         category: 'Equipment',
-        hasReceipt: true,
-        comments: 'Heavy machinery rental for site clearing',
-        approved: true,
+        receipt: 'receipt1.pdf',
+        comments: 'Excavator rental from ABC Equipment',
+        status: 'approved'
       },
       {
-        id: 'e2',
+        id: 'exp2',
         name: 'Labor Costs',
-        amount: 2000,
-        date: '2023-06-10',
+        amount: '$6,800.00',
+        date: '2023-09-18',
         category: 'Labor',
-        hasReceipt: true,
-        comments: 'Site clearing labor',
-        approved: false,
-      },
-    ],
+        receipt: 'receipt2.pdf',
+        comments: 'Site preparation team - 4 workers',
+        status: 'pending'
+      }
+    ]
   },
   {
     id: '2',
-    number: '2',
-    description: 'Foundation Work',
-    scheduledValue: 40000,
-    previouslyCompleted: 30000,
-    thisperiod: 10000,
-    storedMaterials: 0,
-    totalCompletedToDate: 40000,
-    percentageComplete: 100,
-    balanceToFinish: 0,
-    retainage: 2000,
+    itemNo: 'A-02',
+    description: 'Foundation',
+    scheduledValue: '$62,000.00',
+    fromPreviousApplication: '$31,000.00',
+    thisPeriod: '$18,000.00',
+    materialsPresent: '$3,000.00',
+    totalCompleted: '$52,000.00',
+    percentage: '84%',
+    balanceToFinish: '$10,000.00',
+    retainage: '$5,200.00',
     expenses: [
       {
-        id: 'e3',
-        name: 'Concrete Materials',
-        amount: 6000,
-        date: '2023-06-15',
+        id: 'exp3',
+        name: 'Concrete Delivery',
+        amount: '$12,500.00',
+        date: '2023-09-22',
         category: 'Material',
-        hasReceipt: true,
-        comments: 'Concrete for foundation',
-        approved: true,
+        receipt: 'receipt3.pdf',
+        comments: 'Foundation concrete pour',
+        status: 'approved'
       },
       {
-        id: 'e4',
-        name: 'Labor Costs',
-        amount: 4000,
-        date: '2023-06-20',
+        id: 'exp4',
+        name: 'Rebar Installation',
+        amount: '$5,500.00',
+        date: '2023-09-24',
         category: 'Labor',
-        hasReceipt: true,
-        comments: 'Foundation labor',
-        approved: true,
-      },
-    ],
+        receipt: 'receipt4.pdf',
+        comments: 'Rebar installation labor',
+        status: 'changes_requested'
+      }
+    ]
   },
   {
     id: '3',
-    number: '3',
-    description: 'Framing',
-    scheduledValue: 35000,
-    previouslyCompleted: 0,
-    thisperiod: 20000,
-    storedMaterials: 5000,
-    totalCompletedToDate: 25000,
-    percentageComplete: 71,
-    balanceToFinish: 10000,
-    retainage: 1250,
+    itemNo: 'A-03',
+    description: 'Framing & Structure',
+    scheduledValue: '$95,000.00',
+    fromPreviousApplication: '$0.00',
+    thisPeriod: '$45,000.00',
+    materialsPresent: '$20,000.00',
+    totalCompleted: '$65,000.00',
+    percentage: '68%',
+    balanceToFinish: '$30,000.00',
+    retainage: '$6,500.00',
     expenses: [
       {
-        id: 'e5',
-        name: 'Lumber Materials',
-        amount: 12000,
-        date: '2023-07-01',
+        id: 'exp5',
+        name: 'Lumber Package',
+        amount: '$32,000.00',
+        date: '2023-10-01',
         category: 'Material',
-        hasReceipt: true,
-        comments: 'Lumber for framing',
-        approved: true,
+        receipt: 'receipt5.pdf',
+        comments: 'Complete lumber package for framing',
+        status: 'pending'
       },
       {
-        id: 'e6',
-        name: 'Labor Costs',
-        amount: 8000,
-        date: '2023-07-05',
+        id: 'exp6',
+        name: 'Framing Crew',
+        amount: '$13,000.00',
+        date: '2023-10-05',
         category: 'Labor',
-        hasReceipt: false,
-        comments: 'Framing labor',
-        approved: false,
-      },
-    ],
+        receipt: 'receipt6.pdf',
+        comments: 'Framing labor - 6 workers',
+        status: 'pending'
+      }
+    ]
   },
 ];
 
+// Application summary data
+const mockApplicationSummary = {
+  id: 'pa1',
+  projectId: '1',
+  projectName: 'Office Building Renovation',
+  contractor: 'Smith Construction',
+  periodFrom: '2023-09-01',
+  periodTo: '2023-09-30',
+  submittedDate: '2023-10-02',
+  contractDate: '2023-07-15',
+  totalContractSum: '$1,250,000.00',
+  currentPayment: '$75,000.00',
+  previousPayments: '$230,000.00',
+  balance: '$945,000.00',
+  retainage: '$30,500.00',
+  status: 'pending_review',
+  currentReviewer: 'Alice Wilson',
+  reviewChain: [
+    { name: 'Alice Wilson', role: 'Financial Auditor', status: 'reviewing' },
+    { name: 'Bob Thomas', role: 'Technical Reviewer', status: 'pending' },
+    { name: 'Director User', role: 'Director', status: 'pending' },
+  ]
+};
+
 const PayApplicationDetails = () => {
-  const { id } = useParams<{ id: string }>();
+  const { id } = useParams();
   const { user } = useAuth();
-  const [application, setApplication] = useState<any>(null);
+  const [application, setApplication] = useState(mockApplicationSummary);
+  const [lineItems, setLineItems] = useState(mockLineItems);
   const [isLoading, setIsLoading] = useState(true);
-  const [expandedLineItems, setExpandedLineItems] = useState<Record<string, boolean>>({});
-  const [expandedExpenses, setExpandedExpenses] = useState<Record<string, boolean>>({});
+  const [selectedLineItem, setSelectedLineItem] = useState<any>(null);
+  const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false);
+  const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
+  const [reviewAction, setReviewAction] = useState('');
+  const [reviewComment, setReviewComment] = useState('');
+  const [showReceipt, setShowReceipt] = useState(false);
+  const [selectedReceipt, setSelectedReceipt] = useState('');
 
   useEffect(() => {
-    const fetchApplicationDetails = async () => {
+    // Simulate API call to get application details
+    const fetchData = async () => {
       try {
         setIsLoading(true);
-        // This would be an API call in a real application
+        // In a real implementation, this would be an API call
         await new Promise(resolve => setTimeout(resolve, 800));
         
-        setApplication({
-          id,
-          projectId: '1',
-          projectName: 'Office Building Renovation',
-          contractor: 'Smith Construction',
-          submittedDate: '2023-08-15',
-          amount: '$45,000',
-          status: 'pending_review',
-          reviewers: ['Alice Wilson', 'Bob Thomas'],
-          currentReviewer: 'Alice Wilson',
-          lineItems: mockLineItems,
-        });
+        // For now, we're using mock data
+        setApplication(mockApplicationSummary);
+        setLineItems(mockLineItems);
       } catch (error) {
-        console.error('Error fetching application details:', error);
+        console.error('Error fetching pay application:', error);
       } finally {
         setIsLoading(false);
       }
     };
-
-    fetchApplicationDetails();
+    
+    fetchData();
   }, [id]);
 
-  const toggleLineItem = (lineItemId: string) => {
-    setExpandedLineItems(prev => ({
-      ...prev,
-      [lineItemId]: !prev[lineItemId]
-    }));
+  const handleApproveApplication = () => {
+    // Open review modal with approve action
+    setReviewAction('approve');
+    setIsReviewModalOpen(true);
   };
 
-  const toggleExpense = (expenseId: string) => {
-    setExpandedExpenses(prev => ({
-      ...prev,
-      [expenseId]: !prev[expenseId]
-    }));
+  const handleRequestChanges = () => {
+    // Open review modal with reject action
+    setReviewAction('reject');
+    setIsReviewModalOpen(true);
   };
 
+  const submitReview = async () => {
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      if (reviewAction === 'approve') {
+        toast.success('Pay application approved and sent to next reviewer');
+      } else {
+        toast.info('Changes requested from contractor');
+      }
+      
+      setIsReviewModalOpen(false);
+      setReviewComment('');
+    } catch (error) {
+      console.error('Error submitting review:', error);
+      toast.error('Failed to submit review');
+    }
+  };
+
+  const handleAddExpense = () => {
+    setIsExpenseModalOpen(true);
+  };
+
+  const closeExpenseModal = () => {
+    setIsExpenseModalOpen(false);
+  };
+
+  const closeReceipt = () => {
+    setShowReceipt(false);
+    setSelectedReceipt('');
+  };
+
+  const viewReceipt = (receiptId: string) => {
+    setSelectedReceipt(receiptId);
+    setShowReceipt(true);
+  };
+
+  // Status badge component for expenses
   const StatusBadge = ({ status }: { status: string }) => {
     const statusStyles = {
       approved: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
-      pending_review: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
+      pending: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
       changes_requested: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
     };
   
     const statusText = {
       approved: "Approved",
-      pending_review: "Pending Review",
+      pending: "Pending Review",
       changes_requested: "Changes Requested",
     };
   
@@ -191,44 +261,27 @@ const PayApplicationDetails = () => {
     );
   };
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-background">
-        <Sidebar userRole={user?.role || 'pm'} />
-        <main className="pt-16 pb-12 pl-0 md:pl-20 lg:pl-64">
-          <div className="flex justify-center py-20">
-            <div className="animate-spin h-8 w-8 border-4 border-primary rounded-full border-t-transparent"></div>
+  const LineItemCard = ({ item }: { item: any }) => (
+    <div 
+      className="bg-white dark:bg-gray-900 rounded-xl overflow-hidden shadow-card hover:shadow-elevation transition-all duration-300 cursor-pointer"
+      onClick={() => setSelectedLineItem(item)}
+    >
+      <div className="p-6">
+        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+          <div>
+            <h3 className="font-medium text-lg">{item.itemNo}: {item.description}</h3>
+            <p className="text-muted-foreground">Scheduled Value: {item.scheduledValue}</p>
           </div>
-        </main>
-      </div>
-    );
-  }
-
-  if (!application) {
-    return (
-      <div className="min-h-screen bg-background">
-        <Sidebar userRole={user?.role || 'pm'} />
-        <main className="pt-16 pb-12 pl-0 md:pl-20 lg:pl-64">
-          <div className="px-6 md:px-8 max-w-6xl mx-auto text-center py-20">
-            <h2 className="text-2xl font-bold mb-2">Application Not Found</h2>
-            <p className="text-muted-foreground mb-6">The pay application you're looking for doesn't exist or you don't have permission to view it.</p>
-            <Link to="/applications">
-              <CustomButton>
-                <ArrowLeft size={16} className="mr-2" /> Back to Applications
-              </CustomButton>
-            </Link>
+          <div className="flex flex-col items-end">
+            <div className="text-sm font-medium">This Period: {item.thisPeriod}</div>
+            <div className="text-sm text-muted-foreground">
+              Total: {item.totalCompleted} ({item.percentage})
+            </div>
           </div>
-        </main>
+        </div>
       </div>
-    );
-  }
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
-  };
-
-  const isReviewer = user?.role === 'reviewer' || user?.role === 'pm';
-  const isContractor = user?.role === 'contractor';
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-background">
@@ -236,272 +289,483 @@ const PayApplicationDetails = () => {
       
       <main className="pt-16 pb-12 pl-0 md:pl-20 lg:pl-64">
         <div className="px-6 md:px-8 max-w-6xl mx-auto">
-          <div className="mb-6">
-            <Link to="/applications" className="text-sm text-muted-foreground hover:text-foreground hover:underline flex items-center">
-              <ArrowLeft size={16} className="mr-1" /> Back to Applications
-            </Link>
-          </div>
-
           <motion.div
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
           >
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-              <div>
-                <div className="flex items-center gap-2 mb-2">
-                  <h1 className="text-2xl md:text-3xl font-bold">Pay Application #{application.id.slice(-4)}</h1>
-                  <StatusBadge status={application.status} />
-                </div>
-                <p className="text-muted-foreground">
-                  {application.projectName} • {application.contractor} • 
-                  Submitted: {new Date(application.submittedDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                </p>
+              <div className="flex items-center gap-2">
+                <Link to="/applications" className="text-muted-foreground hover:text-foreground transition-colors">
+                  <ArrowLeft size={18} />
+                </Link>
+                <h1 className="text-2xl md:text-3xl font-bold">{application.projectName}</h1>
               </div>
 
-              <div className="flex flex-wrap gap-2">
-                {isReviewer && application.status === 'pending_review' && (
-                  <>
-                    <CustomButton variant="outline" size="sm">
-                      <X size={16} className="mr-2" /> Request Changes
-                    </CustomButton>
-                    <CustomButton size="sm">
-                      <Check size={16} className="mr-2" /> Approve
-                    </CustomButton>
-                  </>
-                )}
-                {(user?.role === 'director' || user?.role === 'pm') && application.status === 'approved' && (
-                  <CustomButton size="sm">
-                    <Download size={16} className="mr-2" /> Download AIA G702
-                  </CustomButton>
-                )}
+              <div className="flex flex-wrap items-center gap-3">
+                <span className={cn(
+                  "px-3 py-1 rounded-full text-sm font-medium",
+                  application.status === 'approved' ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" :
+                  application.status === 'pending_review' ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400" :
+                  "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                )}>
+                  {application.status === 'approved' ? 'Approved' :
+                   application.status === 'pending_review' ? 'Pending Review' :
+                   'Changes Requested'}
+                </span>
               </div>
             </div>
           </motion.div>
 
-          {/* Header Summary */}
-          <div className="bg-white dark:bg-gray-900 rounded-xl p-6 shadow-card mb-6">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          {/* Application Summary */}
+          <div className="bg-white dark:bg-gray-900 rounded-xl shadow-card mb-8 p-6">
+            <h2 className="text-lg font-semibold mb-4">Application Summary</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               <div>
-                <div className="text-sm text-muted-foreground">Total Amount</div>
-                <div className="text-2xl font-semibold">{application.amount}</div>
+                <p className="text-sm text-muted-foreground">Contractor</p>
+                <p className="font-medium">{application.contractor}</p>
               </div>
               <div>
-                <div className="text-sm text-muted-foreground">Status</div>
-                <StatusBadge status={application.status} />
+                <p className="text-sm text-muted-foreground">Period</p>
+                <p className="font-medium">{new Date(application.periodFrom).toLocaleDateString()} - {new Date(application.periodTo).toLocaleDateString()}</p>
               </div>
               <div>
-                <div className="text-sm text-muted-foreground">Current Reviewer</div>
-                <div className="font-medium">{application.currentReviewer || 'N/A'}</div>
+                <p className="text-sm text-muted-foreground">Submitted</p>
+                <p className="font-medium">{new Date(application.submittedDate).toLocaleDateString()}</p>
               </div>
               <div>
-                <div className="text-sm text-muted-foreground">Line Items</div>
-                <div className="font-medium">{application.lineItems.length}</div>
+                <p className="text-sm text-muted-foreground">Contract Sum</p>
+                <p className="font-medium">{application.totalContractSum}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Current Payment</p>
+                <p className="font-medium">{application.currentPayment}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Previous Payments</p>
+                <p className="font-medium">{application.previousPayments}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Balance to Finish</p>
+                <p className="font-medium">{application.balance}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Retainage</p>
+                <p className="font-medium">{application.retainage}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Current Reviewer</p>
+                <p className="font-medium">{application.currentReviewer}</p>
               </div>
             </div>
           </div>
 
-          {/* Line Items */}
-          <h2 className="text-xl font-semibold mb-4">Line Items</h2>
-          <div className="space-y-4 mb-8">
-            {application.lineItems.map((item: any) => (
-              <div 
-                key={item.id}
-                className="bg-white dark:bg-gray-900 rounded-xl shadow-card overflow-hidden"
-              >
-                <div 
-                  className="p-4 cursor-pointer flex items-center justify-between hover:bg-muted/30 transition-colors"
-                  onClick={() => toggleLineItem(item.id)}
-                >
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-muted-foreground">#{item.number}</span>
-                      <h3 className="font-medium">{item.description}</h3>
-                    </div>
-                    <div className="text-sm text-muted-foreground mt-1">
-                      Scheduled Value: {formatCurrency(item.scheduledValue)} • 
-                      {item.percentageComplete}% Complete • 
-                      Balance: {formatCurrency(item.balanceToFinish)}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <div className="text-right">
-                      <div className="font-medium">{formatCurrency(item.totalCompletedToDate)}</div>
-                      <div className="text-xs text-muted-foreground">Total to Date</div>
-                    </div>
-                    {expandedLineItems[item.id] ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
-                  </div>
-                </div>
-
-                {expandedLineItems[item.id] && (
-                  <div className="px-4 pb-4 border-t border-border pt-4">
-                    {/* Financial Details */}
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-sm">
-                        <thead>
-                          <tr className="border-b border-border">
-                            <th className="text-left pb-2 font-medium text-muted-foreground">Description</th>
-                            <th className="text-right pb-2 font-medium text-muted-foreground">Scheduled Value</th>
-                            <th className="text-right pb-2 font-medium text-muted-foreground">Previous Applications</th>
-                            <th className="text-right pb-2 font-medium text-muted-foreground">This Period</th>
-                            <th className="text-right pb-2 font-medium text-muted-foreground">Materials Stored</th>
-                            <th className="text-right pb-2 font-medium text-muted-foreground">Total Completed</th>
-                            <th className="text-right pb-2 font-medium text-muted-foreground">%</th>
-                            <th className="text-right pb-2 font-medium text-muted-foreground">Balance</th>
-                            <th className="text-right pb-2 font-medium text-muted-foreground">Retainage</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          <tr>
-                            <td className="py-3 font-medium">{item.description}</td>
-                            <td className="py-3 text-right">{formatCurrency(item.scheduledValue)}</td>
-                            <td className="py-3 text-right">{formatCurrency(item.previouslyCompleted)}</td>
-                            <td className="py-3 text-right">{formatCurrency(item.thisperiod)}</td>
-                            <td className="py-3 text-right">{formatCurrency(item.storedMaterials)}</td>
-                            <td className="py-3 text-right font-medium">{formatCurrency(item.totalCompletedToDate)}</td>
-                            <td className="py-3 text-right">{item.percentageComplete}%</td>
-                            <td className="py-3 text-right">{formatCurrency(item.balanceToFinish)}</td>
-                            <td className="py-3 text-right">{formatCurrency(item.retainage)}</td>
-                          </tr>
-                        </tbody>
-                      </table>
-                    </div>
-
-                    {/* Expenses */}
-                    <div className="mt-6">
-                      <h4 className="font-medium mb-3">Expenses</h4>
-                      {item.expenses.length === 0 ? (
-                        <p className="text-muted-foreground">No expenses added</p>
-                      ) : (
-                        <div className="space-y-3">
-                          {item.expenses.map((expense: any) => (
-                            <div 
-                              key={expense.id}
-                              className="border border-border rounded-lg overflow-hidden"
-                            >
-                              <div 
-                                className="p-3 flex items-center justify-between cursor-pointer hover:bg-muted/30 transition-colors"
-                                onClick={() => toggleExpense(expense.id)}
-                              >
-                                <div className="flex items-center gap-3">
-                                  <div className={cn(
-                                    "w-2 h-2 rounded-full",
-                                    expense.approved ? "bg-green-500" : "bg-amber-500"
-                                  )} />
-                                  <div>
-                                    <div className="font-medium">{expense.name}</div>
-                                    <div className="text-xs text-muted-foreground">
-                                      {expense.category} • {new Date(expense.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                                    </div>
-                                  </div>
-                                </div>
-                                <div className="flex items-center gap-4">
-                                  <div className="text-right">
-                                    <div className="font-medium">{formatCurrency(expense.amount)}</div>
-                                    {expense.hasReceipt && (
-                                      <div className="text-xs text-muted-foreground">Receipt Available</div>
-                                    )}
-                                  </div>
-                                  {expandedExpenses[expense.id] ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                                </div>
-                              </div>
-
-                              {expandedExpenses[expense.id] && (
-                                <div className="px-4 py-3 border-t border-border">
-                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div>
-                                      <div className="text-sm text-muted-foreground mb-1">Details</div>
-                                      <p className="text-sm">{expense.comments || 'No comments provided'}</p>
-                                    </div>
-                                    <div>
-                                      {expense.hasReceipt && (
-                                        <div className="flex justify-end">
-                                          <CustomButton variant="outline" size="sm">
-                                            <Download size={14} className="mr-2" /> View Receipt
-                                          </CustomButton>
-                                        </div>
-                                      )}
-                                    </div>
-                                  </div>
-
-                                  {isReviewer && !expense.approved && (
-                                    <div className="flex justify-end gap-2 mt-4 pt-3 border-t border-border">
-                                      <CustomButton variant="outline" size="sm">
-                                        <X size={14} className="mr-1" /> Reject
-                                      </CustomButton>
-                                      <CustomButton size="sm">
-                                        <Check size={14} className="mr-1" /> Approve
-                                      </CustomButton>
-                                    </div>
-                                  )}
-                                </div>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      )}
-
-                      {isContractor && (
-                        <div className="mt-4">
-                          <CustomButton size="sm" variant="outline">
-                            <Plus size={16} className="mr-2" /> Add Expense
-                          </CustomButton>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-
-          {/* Review Status */}
-          <div className="bg-white dark:bg-gray-900 rounded-xl p-6 shadow-card">
-            <h2 className="text-xl font-semibold mb-4">Review Process</h2>
-            <div className="space-y-4">
-              {application.reviewers.map((reviewer: string, index: number) => {
-                const isCurrentReviewer = reviewer === application.currentReviewer;
-                const hasReviewed = application.status === 'approved' || 
-                  (application.status === 'pending_review' && 
-                   application.reviewers.indexOf(application.currentReviewer) > index);
-                
-                return (
+          {/* Review Chain */}
+          <div className="bg-white dark:bg-gray-900 rounded-xl shadow-card mb-8 p-6">
+            <h2 className="text-lg font-semibold mb-4">Review Chain</h2>
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+              {application.reviewChain.map((reviewer, index) => (
+                <div key={index} className="flex items-center gap-3">
                   <div 
-                    key={index}
                     className={cn(
-                      "p-4 border rounded-lg flex items-center justify-between",
-                      isCurrentReviewer ? "border-amber-500 bg-amber-50/50 dark:bg-amber-950/20" : 
-                        hasReviewed ? "border-green-500 bg-green-50/50 dark:bg-green-950/20" : 
-                          "border-gray-200 dark:border-gray-800"
+                      "flex items-center justify-center w-8 h-8 rounded-full text-white",
+                      reviewer.status === 'reviewing' ? "bg-amber-500" :
+                      reviewer.status === 'approved' ? "bg-green-500" : "bg-muted"
                     )}
                   >
-                    <div className="flex items-center gap-3">
-                      <div className={cn(
-                        "w-2 h-2 rounded-full",
-                        isCurrentReviewer ? "bg-amber-500" : 
-                          hasReviewed ? "bg-green-500" : "bg-gray-300 dark:bg-gray-600"
-                      )} />
-                      <div>
-                        <div className="font-medium">{reviewer}</div>
-                        <div className="text-xs text-muted-foreground">
-                          {isCurrentReviewer ? "Currently Reviewing" : 
-                            hasReviewed ? "Approved" : "Pending"}
-                        </div>
-                      </div>
+                    {reviewer.status === 'approved' ? (
+                      <Check size={16} />
+                    ) : reviewer.status === 'reviewing' ? (
+                      <Clock size={16} />
+                    ) : (
+                      index + 1
+                    )}
+                  </div>
+                  <div>
+                    <p className="font-medium text-sm">{reviewer.name}</p>
+                    <p className="text-xs text-muted-foreground">{reviewer.role}</p>
+                  </div>
+                  
+                  {index < application.reviewChain.length - 1 && (
+                    <div className="hidden sm:block w-8 h-px bg-border mx-2"></div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Line Items Section */}
+          {selectedLineItem ? (
+            <div className="mb-8">
+              <button 
+                onClick={() => setSelectedLineItem(null)}
+                className="mb-4 flex items-center text-sm text-muted-foreground hover:text-foreground"
+              >
+                <ArrowLeft size={16} className="mr-1" /> Back to all line items
+              </button>
+              
+              <div className="bg-white dark:bg-gray-900 rounded-xl shadow-card mb-6">
+                <div className="p-6 border-b border-border">
+                  <h2 className="text-lg font-semibold">{selectedLineItem.itemNo}: {selectedLineItem.description}</h2>
+                </div>
+                
+                <div className="p-6">
+                  <h3 className="font-medium mb-4">Financial Summary</h3>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4 mb-6">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Scheduled Value</p>
+                      <p className="font-medium">{selectedLineItem.scheduledValue}</p>
                     </div>
-                    {hasReviewed && (
-                      <div className="flex items-center text-green-600 dark:text-green-400">
-                        <Check size={16} className="mr-1" />
-                        <span className="text-sm font-medium">Approved</span>
+                    <div>
+                      <p className="text-sm text-muted-foreground">From Previous Application</p>
+                      <p className="font-medium">{selectedLineItem.fromPreviousApplication}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">This Period</p>
+                      <p className="font-medium">{selectedLineItem.thisPeriod}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Materials Present</p>
+                      <p className="font-medium">{selectedLineItem.materialsPresent}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Total Completed</p>
+                      <p className="font-medium">{selectedLineItem.totalCompleted}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Percentage</p>
+                      <p className="font-medium">{selectedLineItem.percentage}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Balance to Finish</p>
+                      <p className="font-medium">{selectedLineItem.balanceToFinish}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Retainage</p>
+                      <p className="font-medium">{selectedLineItem.retainage}</p>
+                    </div>
+                  </div>
+                  
+                  <div className="mt-8">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="font-medium">Expenses</h3>
+                      {user?.role === 'contractor' && (
+                        <CustomButton size="sm" onClick={handleAddExpense}>
+                          <PlusCircle size={16} className="mr-2" /> Add Expense
+                        </CustomButton>
+                      )}
+                    </div>
+                    
+                    {selectedLineItem.expenses.length > 0 ? (
+                      <div className="space-y-4">
+                        {selectedLineItem.expenses.map((expense: any) => (
+                          <div 
+                            key={expense.id} 
+                            className="bg-muted/30 dark:bg-muted/10 p-4 rounded-lg border border-border"
+                          >
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
+                              <div>
+                                <div className="flex items-center gap-2">
+                                  <h4 className="font-medium">{expense.name}</h4>
+                                  <StatusBadge status={expense.status} />
+                                </div>
+                                <p className="text-sm text-muted-foreground">
+                                  {new Date(expense.date).toLocaleDateString()} • {expense.category}
+                                </p>
+                              </div>
+                              <div className="text-lg font-semibold">
+                                {expense.amount}
+                              </div>
+                            </div>
+                            
+                            {expense.comments && (
+                              <p className="text-sm mb-3">
+                                {expense.comments}
+                              </p>
+                            )}
+                            
+                            <div className="flex items-center gap-2">
+                              <button 
+                                onClick={() => viewReceipt(expense.receipt)}
+                                className="text-xs flex items-center text-primary hover:underline"
+                              >
+                                <FileText size={14} className="mr-1" /> View Receipt
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-8 bg-muted/20 rounded-lg border border-dashed border-border">
+                        <DollarSign size={32} className="mx-auto text-muted-foreground opacity-20 mb-2" />
+                        <p className="text-muted-foreground">No expenses added yet</p>
+                        {user?.role === 'contractor' && (
+                          <CustomButton 
+                            size="sm" 
+                            variant="outline" 
+                            className="mt-3"
+                            onClick={handleAddExpense}
+                          >
+                            <PlusCircle size={16} className="mr-2" /> Add Expense
+                          </CustomButton>
+                        )}
                       </div>
                     )}
                   </div>
-                );
-              })}
+                </div>
+              </div>
+              
+              {/* Reviewer Actions */}
+              {user?.role === 'reviewer' && (
+                <div className="flex justify-end gap-3">
+                  <CustomButton variant="outline" onClick={handleRequestChanges}>
+                    <X size={16} className="mr-2" /> Request Changes
+                  </CustomButton>
+                  <CustomButton onClick={handleApproveApplication}>
+                    <Check size={16} className="mr-2" /> Approve
+                  </CustomButton>
+                </div>
+              )}
+              
+              {/* Director Actions */}
+              {user?.role === 'director' && application.status === 'pending_review' && (
+                <div className="flex justify-end gap-3">
+                  <CustomButton variant="outline" onClick={handleRequestChanges}>
+                    <X size={16} className="mr-2" /> Request Changes
+                  </CustomButton>
+                  <CustomButton onClick={handleApproveApplication}>
+                    <Check size={16} className="mr-2" /> Approve & Finalize
+                  </CustomButton>
+                </div>
+              )}
+              
+              {/* Export Actions */}
+              {application.status === 'approved' && (
+                <div className="flex justify-end">
+                  <CustomButton>
+                    <Download size={16} className="mr-2" /> Export as G702
+                  </CustomButton>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="mb-8">
+              <h2 className="text-xl font-semibold mb-6">Line Items</h2>
+              <div className="grid grid-cols-1 gap-4">
+                {lineItems.map((item) => (
+                  <LineItemCard key={item.id} item={item} />
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </main>
+
+      {/* Receipt View Modal */}
+      {showReceipt && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white dark:bg-gray-900 rounded-xl shadow-elevation max-w-4xl w-full max-h-screen overflow-auto">
+            <div className="p-6 border-b border-border flex items-center justify-between">
+              <h2 className="text-xl font-semibold">Receipt</h2>
+              <button
+                onClick={closeReceipt}
+                className="h-8 w-8 rounded-md flex items-center justify-center hover:bg-muted transition-colors"
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <div className="p-6">
+              <div className="bg-muted/30 p-4 rounded-lg text-center">
+                <p className="mb-4 text-muted-foreground">
+                  Receipt: {selectedReceipt}
+                </p>
+                {/* Mock receipt display */}
+                <div className="bg-white rounded border border-border p-6 max-w-md mx-auto">
+                  <h3 className="text-lg font-semibold mb-4">Receipt #{selectedReceipt.split('.')[0]}</h3>
+                  <p className="mb-2">Date: Oct 5, 2023</p>
+                  <p className="mb-2">Vendor: Building Materials Inc.</p>
+                  <p className="mb-2">Description: Construction Materials</p>
+                  <p className="mb-6">Amount: $2,450.00</p>
+                  <div className="border-t border-border pt-4 text-center">
+                    <p className="text-sm text-primary">PAID</p>
+                  </div>
+                </div>
+              </div>
+              <div className="flex justify-end mt-4">
+                <CustomButton>
+                  <Download size={16} className="mr-2" /> Download Receipt
+                </CustomButton>
+              </div>
             </div>
           </div>
         </div>
-      </main>
+      )}
+
+      {/* Add Expense Modal */}
+      {isExpenseModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white dark:bg-gray-900 rounded-xl shadow-elevation max-w-md w-full">
+            <div className="p-6 border-b border-border flex items-center justify-between">
+              <h2 className="text-xl font-semibold">Add Expense</h2>
+              <button
+                onClick={closeExpenseModal}
+                className="h-8 w-8 rounded-md flex items-center justify-center hover:bg-muted transition-colors"
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="space-y-2">
+                <label htmlFor="expense-name" className="text-sm font-medium">
+                  Expense Name
+                </label>
+                <input
+                  id="expense-name"
+                  type="text"
+                  placeholder="Enter expense name"
+                  className="w-full px-4 py-2 border border-input rounded-lg bg-background input-focus"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <label htmlFor="expense-amount" className="text-sm font-medium">
+                  Amount
+                </label>
+                <input
+                  id="expense-amount"
+                  type="text"
+                  placeholder="$0.00"
+                  className="w-full px-4 py-2 border border-input rounded-lg bg-background input-focus"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <label htmlFor="expense-date" className="text-sm font-medium">
+                  Date
+                </label>
+                <input
+                  id="expense-date"
+                  type="date"
+                  className="w-full px-4 py-2 border border-input rounded-lg bg-background input-focus"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <label htmlFor="expense-category" className="text-sm font-medium">
+                  Category
+                </label>
+                <select
+                  id="expense-category"
+                  className="w-full px-4 py-2 border border-input rounded-lg bg-background input-focus"
+                >
+                  <option value="Material">Material</option>
+                  <option value="Labor">Labor</option>
+                  <option value="Equipment">Equipment</option>
+                  <option value="Misc">Misc</option>
+                </select>
+              </div>
+              
+              <div className="space-y-2">
+                <label htmlFor="expense-receipt" className="text-sm font-medium">
+                  Receipt
+                </label>
+                <div className="border border-dashed border-input rounded-lg p-4 bg-background">
+                  <div className="flex flex-col items-center justify-center">
+                    <Upload size={24} className="text-muted-foreground mb-2" />
+                    <p className="text-sm text-muted-foreground mb-2">
+                      Drag & drop a file or browse
+                    </p>
+                    <input
+                      id="expense-receipt"
+                      type="file"
+                      className="hidden"
+                    />
+                    <CustomButton size="sm" variant="outline" onClick={() => document.getElementById('expense-receipt')?.click()}>
+                      Browse Files
+                    </CustomButton>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <label htmlFor="expense-comments" className="text-sm font-medium">
+                  Comments (Optional)
+                </label>
+                <textarea
+                  id="expense-comments"
+                  placeholder="Add any additional details about this expense"
+                  className="w-full px-4 py-2 border border-input rounded-lg bg-background input-focus h-24 resize-none"
+                ></textarea>
+              </div>
+            </div>
+            <div className="p-6 border-t border-border flex justify-end gap-2">
+              <CustomButton variant="outline" onClick={closeExpenseModal}>
+                Cancel
+              </CustomButton>
+              <CustomButton onClick={closeExpenseModal}>
+                Save Expense
+              </CustomButton>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Review Modal */}
+      {isReviewModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white dark:bg-gray-900 rounded-xl shadow-elevation max-w-md w-full">
+            <div className="p-6 border-b border-border flex items-center justify-between">
+              <h2 className="text-xl font-semibold">
+                {reviewAction === 'approve' ? 'Approve Application' : 'Request Changes'}
+              </h2>
+              <button
+                onClick={() => setIsReviewModalOpen(false)}
+                className="h-8 w-8 rounded-md flex items-center justify-center hover:bg-muted transition-colors"
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="space-y-2">
+                <label htmlFor="review-comments" className="text-sm font-medium">
+                  {reviewAction === 'approve' ? 'Comments (Optional)' : 'Comments for Contractor'}
+                </label>
+                <textarea
+                  id="review-comments"
+                  value={reviewComment}
+                  onChange={(e) => setReviewComment(e.target.value)}
+                  placeholder={reviewAction === 'approve' ? 
+                    "Add any comments about this approval" : 
+                    "Explain what changes the contractor needs to make"
+                  }
+                  className="w-full px-4 py-2 border border-input rounded-lg bg-background input-focus h-32 resize-none"
+                  required={reviewAction === 'reject'}
+                ></textarea>
+              </div>
+            </div>
+            <div className="p-6 border-t border-border flex justify-end gap-2">
+              <CustomButton variant="outline" onClick={() => setIsReviewModalOpen(false)}>
+                Cancel
+              </CustomButton>
+              <CustomButton 
+                onClick={submitReview}
+                variant={reviewAction === 'approve' ? 'default' : 'destructive'}
+              >
+                {reviewAction === 'approve' ? (
+                  <>
+                    <Check size={16} className="mr-2" /> Submit Approval
+                  </>
+                ) : (
+                  <>
+                    <X size={16} className="mr-2" /> Request Changes
+                  </>
+                )}
+              </CustomButton>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
