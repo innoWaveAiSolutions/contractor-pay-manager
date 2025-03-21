@@ -1,4 +1,3 @@
-
 import { useAuth } from '@/contexts/AuthContext';
 
 // Mock project data
@@ -122,6 +121,314 @@ const mockPayApplications = [
     status: 'changes_requested',
     reviewers: ['Alice Wilson', 'Bob Thomas'],
     currentReviewer: 'Bob Thomas',
+  }
+];
+
+// Add review chain data to mock application summary
+const mockApplicationSummary = {
+  id: 'pa1',
+  projectId: '1',
+  projectName: 'Office Building Renovation',
+  contractor: 'Smith Construction',
+  submittedDate: '2023-08-15',
+  periodFrom: '2023-07-01',
+  periodTo: '2023-07-31',
+  amount: '$45,000',
+  status: 'pending_review',
+  reviewers: ['Alice Wilson', 'Bob Thomas'],
+  currentReviewer: 'Alice Wilson',
+  totalContractSum: '$250,000',
+  currentPayment: '$45,000',
+  previousPayments: '$30,000',
+  balance: '$175,000',
+  retainage: '$3,750',
+  reviewChain: [
+    {
+      name: 'Alice Wilson',
+      role: 'Financial Auditor',
+      status: 'reviewing'
+    },
+    {
+      name: 'Bob Thomas',
+      role: 'Technical Reviewer',
+      status: 'pending'
+    },
+    {
+      name: 'John Director',
+      role: 'Director',
+      status: 'pending'
+    }
+  ]
+};
+
+// Mock line items data with expenses
+const mockLineItems = [
+  {
+    id: 'li1',
+    itemNo: '001',
+    description: 'Site Preparation',
+    scheduledValue: '$15,000',
+    fromPreviousApplication: '$10,000',
+    thisPeriod: '$3,000',
+    materialsPresent: '$0',
+    totalCompleted: '$13,000',
+    percentage: '86.7%',
+    balanceToFinish: '$2,000',
+    retainage: '$650',
+    expenses: [
+      {
+        id: 'exp1',
+        name: 'Heavy Equipment Rental',
+        amount: '$1,500',
+        date: '2023-07-05',
+        category: 'Equipment',
+        comments: 'Rental of excavator and bulldozer for site clearing and grading.',
+        receipt: 'receipt123.pdf'
+      },
+      {
+        id: 'exp2',
+        name: 'Labor - Site Clearing',
+        amount: '$850',
+        date: '2023-07-08',
+        category: 'Labor',
+        comments: 'Labor costs for site clearing activities including tree removal.',
+        receipt: 'receipt124.pdf'
+      }
+    ]
+  },
+  {
+    id: 'li2',
+    itemNo: '002',
+    description: 'Foundation Work',
+    scheduledValue: '$35,000',
+    fromPreviousApplication: '$20,000',
+    thisPeriod: '$10,000',
+    materialsPresent: '$0',
+    totalCompleted: '$30,000',
+    percentage: '85.7%',
+    balanceToFinish: '$5,000',
+    retainage: '$1,500',
+    expenses: [
+      {
+        id: 'exp3',
+        name: 'Concrete Materials',
+        amount: '$5,500',
+        date: '2023-07-12',
+        category: 'Material',
+        comments: 'Purchase of concrete and rebar for foundation pouring.',
+        receipt: 'receipt125.pdf'
+      },
+      {
+        id: 'exp4',
+        name: 'Foundation Labor',
+        amount: '$3,200',
+        date: '2023-07-15',
+        category: 'Labor',
+        comments: 'Labor costs for foundation formwork and concrete pouring.',
+        receipt: 'receipt126.pdf'
+      }
+    ]
+  },
+  {
+    id: 'li3',
+    itemNo: '003',
+    description: 'Framing',
+    scheduledValue: '$50,000',
+    fromPreviousApplication: '$0',
+    thisPeriod: '$32,000',
+    materialsPresent: '$0',
+    totalCompleted: '$32,000',
+    percentage: '64%',
+    balanceToFinish: '$18,000',
+    retainage: '$1,600',
+    expenses: [
+      {
+        id: 'exp5',
+        name: 'Lumber Purchase',
+        amount: '$15,200',
+        date: '2023-07-20',
+        category: 'Material',
+        comments: 'Lumber order for wall framing and floor joists.',
+        receipt: 'receipt127.pdf'
+      },
+      {
+        id: 'exp6',
+        name: 'Framing Crew Labor',
+        amount: '$12,750',
+        date: '2023-07-22',
+        category: 'Labor',
+        comments: 'Labor costs for framing crew over 8-day period.',
+        receipt: 'receipt128.pdf'
+      }
+    ]
+  },
+  {
+    id: 'li4',
+    itemNo: '004',
+    description: 'Plumbing Rough-In',
+    scheduledValue: '$25,000',
+    fromPreviousApplication: '$0',
+    thisPeriod: '$0',
+    materialsPresent: '$0',
+    totalCompleted: '$0',
+    percentage: '0%',
+    balanceToFinish: '$25,000',
+    retainage: '$0',
+    expenses: []
+  },
+  {
+    id: 'li5',
+    itemNo: '005',
+    description: 'Electrical Rough-In',
+    scheduledValue: '$30,000',
+    fromPreviousApplication: '$0',
+    thisPeriod: '$0',
+    materialsPresent: '$0',
+    totalCompleted: '$0',
+    percentage: '0%',
+    balanceToFinish: '$30,000',
+    retainage: '$0',
+    expenses: []
+  },
+  {
+    id: 'li6',
+    itemNo: '006',
+    description: 'HVAC Installation',
+    scheduledValue: '$40,000',
+    fromPreviousApplication: '$0',
+    thisPeriod: '$0',
+    materialsPresent: '$0',
+    totalCompleted: '$0',
+    percentage: '0%',
+    balanceToFinish: '$40,000',
+    retainage: '$0',
+    expenses: []
+  },
+  {
+    id: 'li7',
+    itemNo: '007',
+    description: 'Roofing',
+    scheduledValue: '$27,000',
+    fromPreviousApplication: '$0',
+    thisPeriod: '$0',
+    materialsPresent: '$0',
+    totalCompleted: '$0',
+    percentage: '0%',
+    balanceToFinish: '$27,000',
+    retainage: '$0',
+    expenses: []
+  },
+  {
+    id: 'li8',
+    itemNo: '008',
+    description: 'Exterior Siding',
+    scheduledValue: '$18,000',
+    fromPreviousApplication: '$0',
+    thisPeriod: '$0',
+    materialsPresent: '$0',
+    totalCompleted: '$0',
+    percentage: '0%',
+    balanceToFinish: '$18,000',
+    retainage: '$0',
+    expenses: []
+  },
+  {
+    id: 'li9',
+    itemNo: '009',
+    description: 'Drywall Installation',
+    scheduledValue: '$15,000',
+    fromPreviousApplication: '$0',
+    thisPeriod: '$0',
+    materialsPresent: '$0',
+    totalCompleted: '$0',
+    percentage: '0%',
+    balanceToFinish: '$15,000',
+    retainage: '$0',
+    expenses: []
+  },
+  {
+    id: 'li10',
+    itemNo: '010',
+    description: 'Interior Finishes',
+    scheduledValue: '$32,000',
+    fromPreviousApplication: '$0',
+    thisPeriod: '$0',
+    materialsPresent: '$0',
+    totalCompleted: '$0',
+    percentage: '0%',
+    balanceToFinish: '$32,000',
+    retainage: '$0',
+    expenses: []
+  },
+  {
+    id: 'li11',
+    itemNo: '011',
+    description: 'Flooring',
+    scheduledValue: '$22,000',
+    fromPreviousApplication: '$0',
+    thisPeriod: '$0',
+    materialsPresent: '$0',
+    totalCompleted: '$0',
+    percentage: '0%',
+    balanceToFinish: '$22,000',
+    retainage: '$0',
+    expenses: []
+  },
+  {
+    id: 'li12',
+    itemNo: '012',
+    description: 'Cabinetry and Countertops',
+    scheduledValue: '$18,000',
+    fromPreviousApplication: '$0',
+    thisPeriod: '$0',
+    materialsPresent: '$0',
+    totalCompleted: '$0',
+    percentage: '0%',
+    balanceToFinish: '$18,000',
+    retainage: '$0',
+    expenses: []
+  },
+  {
+    id: 'li13',
+    itemNo: '013',
+    description: 'Painting',
+    scheduledValue: '$12,000',
+    fromPreviousApplication: '$0',
+    thisPeriod: '$0',
+    materialsPresent: '$0',
+    totalCompleted: '$0',
+    percentage: '0%',
+    balanceToFinish: '$12,000',
+    retainage: '$0',
+    expenses: []
+  },
+  {
+    id: 'li14',
+    itemNo: '014',
+    description: 'Fixture Installation',
+    scheduledValue: '$8,000',
+    fromPreviousApplication: '$0',
+    thisPeriod: '$0',
+    materialsPresent: '$0',
+    totalCompleted: '$0',
+    percentage: '0%',
+    balanceToFinish: '$8,000',
+    retainage: '$0',
+    expenses: []
+  },
+  {
+    id: 'li15',
+    itemNo: '015',
+    description: 'Final Cleanup and Inspection',
+    scheduledValue: '$3,000',
+    fromPreviousApplication: '$0',
+    thisPeriod: '$0',
+    materialsPresent: '$0',
+    totalCompleted: '$0',
+    percentage: '0%',
+    balanceToFinish: '$3,000',
+    retainage: '$0',
+    expenses: []
   }
 ];
 
@@ -265,6 +572,16 @@ export const useApi = () => {
     return mockPayApplications;
   };
 
+  // Get pay application details
+  const getPayApplicationDetails = async (id: string) => {
+    // Simulate API call delay
+    await new Promise(resolve => setTimeout(resolve, 800));
+    return {
+      application: mockApplicationSummary,
+      lineItems: mockLineItems
+    };
+  };
+
   // Create a new project (only for PMs)
   const createProject = async (projectData: any) => {
     if (user?.role !== 'pm') throw new Error('Unauthorized');
@@ -293,6 +610,7 @@ export const useApi = () => {
     getContractors,
     getReviewers,
     getPayApplications,
+    getPayApplicationDetails,
     createProject,
     inviteTeamMember
   };

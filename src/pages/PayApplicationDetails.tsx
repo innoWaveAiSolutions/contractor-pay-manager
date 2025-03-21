@@ -24,19 +24,70 @@ import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
-const mockLineItems = [
+interface Expense {
+  id: string;
+  name: string;
+  amount: string;
+  date: string;
+  category: string;
+  comments: string;
+  receipt: string;
+}
+
+interface LineItem {
+  id: string;
+  itemNo: string;
+  description: string;
+  scheduledValue: string;
+  fromPreviousApplication: string;
+  thisPeriod: string;
+  materialsPresent: string;
+  totalCompleted: string;
+  percentage: string;
+  balanceToFinish: string;
+  retainage: string;
+  expenses: Expense[];
+}
+
+interface Reviewer {
+  name: string;
+  role: string;
+  status: 'approved' | 'reviewing' | 'pending';
+}
+
+interface PayApplication {
+  id: string;
+  projectId: string;
+  projectName: string;
+  contractor: string;
+  submittedDate: string;
+  periodFrom: string;
+  periodTo: string;
+  amount: string;
+  status: 'approved' | 'pending_review' | 'changes_requested';
+  reviewers: string[];
+  currentReviewer: string | null;
+  totalContractSum: string;
+  currentPayment: string;
+  previousPayments: string;
+  balance: string;
+  retainage: string;
+  reviewChain: Reviewer[];
+}
+
+const mockLineItems: LineItem[] = [
   // ... keep existing mock line items data
 ];
 
-const mockApplicationSummary = {
+const mockApplicationSummary: PayApplication = {
   // ... keep existing mock application summary data
 };
 
 const PayApplicationDetails = () => {
   const { id } = useParams();
   const { user } = useAuth();
-  const [application, setApplication] = useState(mockApplicationSummary);
-  const [lineItems, setLineItems] = useState(mockLineItems);
+  const [application, setApplication] = useState<PayApplication>(mockApplicationSummary);
+  const [lineItems, setLineItems] = useState<LineItem[]>(mockLineItems);
   const [isLoading, setIsLoading] = useState(true);
   const [openLineItems, setOpenLineItems] = useState<string[]>([]);
   const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false);
@@ -45,7 +96,7 @@ const PayApplicationDetails = () => {
   const [reviewComment, setReviewComment] = useState('');
   const [showReceipt, setShowReceipt] = useState(false);
   const [selectedReceipt, setSelectedReceipt] = useState('');
-  const [selectedLineItemForExpense, setSelectedLineItemForExpense] = useState<any>(null);
+  const [selectedLineItemForExpense, setSelectedLineItemForExpense] = useState<LineItem | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -102,7 +153,7 @@ const PayApplicationDetails = () => {
     }
   };
 
-  const handleAddExpense = (lineItem: any) => {
+  const handleAddExpense = (lineItem: LineItem) => {
     setSelectedLineItemForExpense(lineItem);
     setIsExpenseModalOpen(true);
   };
@@ -145,7 +196,7 @@ const PayApplicationDetails = () => {
     );
   };
 
-  const ExpenseCard = ({ expense }: { expense: any }) => {
+  const ExpenseCard = ({ expense }: { expense: Expense }) => {
     const [isExpanded, setIsExpanded] = useState(false);
 
     const getCategoryColor = (category: string) => {
@@ -440,7 +491,7 @@ const PayApplicationDetails = () => {
                         
                         {item.expenses.length > 0 ? (
                           <div className="space-y-1">
-                            {item.expenses.map((expense: any) => (
+                            {item.expenses.map((expense: Expense) => (
                               <ExpenseCard key={expense.id} expense={expense} />
                             ))}
                           </div>
@@ -502,202 +553,208 @@ const PayApplicationDetails = () => {
         </div>
       </main>
 
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-        <div className="bg-white dark:bg-gray-900 rounded-xl shadow-elevation max-w-4xl w-full max-h-screen overflow-auto">
-          <div className="p-6 border-b border-border flex items-center justify-between">
-            <h2 className="text-xl font-semibold">Receipt</h2>
-            <button
-              onClick={closeReceipt}
-              className="h-8 w-8 rounded-md flex items-center justify-center hover:bg-muted transition-colors"
-            >
-              <X size={18} />
-            </button>
-          </div>
-          <div className="p-6">
-            <div className="bg-muted/30 p-4 rounded-lg text-center">
-              <p className="mb-4 text-muted-foreground">
-                Receipt: {selectedReceipt}
-              </p>
-              <div className="bg-white rounded border border-border p-6 max-w-md mx-auto">
-                <h3 className="text-lg font-semibold mb-4">Receipt #{selectedReceipt.split('.')[0]}</h3>
-                <p className="mb-2">Date: Oct 5, 2023</p>
-                <p className="mb-2">Vendor: Building Materials Inc.</p>
-                <p className="mb-2">Description: Construction Materials</p>
-                <p className="mb-6">Amount: $2,450.00</p>
-                <div className="border-t border-border pt-4 text-center">
-                  <p className="text-sm text-primary">PAID</p>
+      {showReceipt && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white dark:bg-gray-900 rounded-xl shadow-elevation max-w-4xl w-full max-h-screen overflow-auto">
+            <div className="p-6 border-b border-border flex items-center justify-between">
+              <h2 className="text-xl font-semibold">Receipt</h2>
+              <button
+                onClick={closeReceipt}
+                className="h-8 w-8 rounded-md flex items-center justify-center hover:bg-muted transition-colors"
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <div className="p-6">
+              <div className="bg-muted/30 p-4 rounded-lg text-center">
+                <p className="mb-4 text-muted-foreground">
+                  Receipt: {selectedReceipt}
+                </p>
+                <div className="bg-white rounded border border-border p-6 max-w-md mx-auto">
+                  <h3 className="text-lg font-semibold mb-4">Receipt #{selectedReceipt.split('.')[0]}</h3>
+                  <p className="mb-2">Date: Oct 5, 2023</p>
+                  <p className="mb-2">Vendor: Building Materials Inc.</p>
+                  <p className="mb-2">Description: Construction Materials</p>
+                  <p className="mb-6">Amount: $2,450.00</p>
+                  <div className="border-t border-border pt-4 text-center">
+                    <p className="text-sm text-primary">PAID</p>
+                  </div>
                 </div>
               </div>
+              <div className="flex justify-end mt-4">
+                <CustomButton>
+                  <Download size={16} className="mr-2" /> Download Receipt
+                </CustomButton>
+              </div>
             </div>
-            <div className="flex justify-end mt-4">
-              <CustomButton>
-                <Download size={16} className="mr-2" /> Download Receipt
+          </div>
+        </div>
+      )}
+
+      {isExpenseModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white dark:bg-gray-900 rounded-xl shadow-elevation max-w-md w-full">
+            <div className="p-6 border-b border-border flex items-center justify-between">
+              <h2 className="text-xl font-semibold">
+                Add Expense to {selectedLineItemForExpense?.description}
+              </h2>
+              <button
+                onClick={closeExpenseModal}
+                className="h-8 w-8 rounded-md flex items-center justify-center hover:bg-muted transition-colors"
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="space-y-2">
+                <label htmlFor="expense-name" className="text-sm font-medium">
+                  Expense Name
+                </label>
+                <input
+                  id="expense-name"
+                  type="text"
+                  placeholder="Enter expense name"
+                  className="w-full px-4 py-2 border border-input rounded-lg bg-background input-focus"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <label htmlFor="expense-amount" className="text-sm font-medium">
+                  Amount
+                </label>
+                <input
+                  id="expense-amount"
+                  type="text"
+                  placeholder="$0.00"
+                  className="w-full px-4 py-2 border border-input rounded-lg bg-background input-focus"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <label htmlFor="expense-date" className="text-sm font-medium">
+                  Date
+                </label>
+                <input
+                  id="expense-date"
+                  type="date"
+                  className="w-full px-4 py-2 border border-input rounded-lg bg-background input-focus"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <label htmlFor="expense-category" className="text-sm font-medium">
+                  Category
+                </label>
+                <select
+                  id="expense-category"
+                  className="w-full px-4 py-2 border border-input rounded-lg bg-background input-focus"
+                >
+                  <option value="Material">Material</option>
+                  <option value="Labor">Labor</option>
+                  <option value="Equipment">Equipment</option>
+                  <option value="Misc">Misc</option>
+                </select>
+              </div>
+              
+              <div className="space-y-2">
+                <label htmlFor="expense-receipt" className="text-sm font-medium">
+                  Receipt
+                </label>
+                <div className="border border-dashed border-input rounded-lg p-4 bg-background">
+                  <div className="flex flex-col items-center justify-center">
+                    <Upload size={24} className="text-muted-foreground mb-2" />
+                    <p className="text-sm text-muted-foreground mb-2">
+                      Drag & drop a file or browse
+                    </p>
+                    <input
+                      id="expense-receipt"
+                      type="file"
+                      className="hidden"
+                    />
+                    <CustomButton size="sm" variant="outline" onClick={() => document.getElementById('expense-receipt')?.click()}>
+                      Browse Files
+                    </CustomButton>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <label htmlFor="expense-comments" className="text-sm font-medium">
+                  Comments (Optional)
+                </label>
+                <textarea
+                  id="expense-comments"
+                  placeholder="Add any additional details about this expense"
+                  className="w-full px-4 py-2 border border-input rounded-lg bg-background input-focus h-24 resize-none"
+                ></textarea>
+              </div>
+            </div>
+            <div className="p-6 border-t border-border flex justify-end gap-2">
+              <CustomButton variant="outline" onClick={closeExpenseModal}>
+                Cancel
+              </CustomButton>
+              <CustomButton onClick={closeExpenseModal}>
+                Save Expense
               </CustomButton>
             </div>
           </div>
         </div>
-      </div>
+      )}
 
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-        <div className="bg-white dark:bg-gray-900 rounded-xl shadow-elevation max-w-md w-full">
-          <div className="p-6 border-b border-border flex items-center justify-between">
-            <h2 className="text-xl font-semibold">
-              Add Expense to {selectedLineItemForExpense?.description}
-            </h2>
-            <button
-              onClick={closeExpenseModal}
-              className="h-8 w-8 rounded-md flex items-center justify-center hover:bg-muted transition-colors"
-            >
-              <X size={18} />
-            </button>
-          </div>
-          <div className="p-6 space-y-4">
-            <div className="space-y-2">
-              <label htmlFor="expense-name" className="text-sm font-medium">
-                Expense Name
-              </label>
-              <input
-                id="expense-name"
-                type="text"
-                placeholder="Enter expense name"
-                className="w-full px-4 py-2 border border-input rounded-lg bg-background input-focus"
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <label htmlFor="expense-amount" className="text-sm font-medium">
-                Amount
-              </label>
-              <input
-                id="expense-amount"
-                type="text"
-                placeholder="$0.00"
-                className="w-full px-4 py-2 border border-input rounded-lg bg-background input-focus"
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <label htmlFor="expense-date" className="text-sm font-medium">
-                Date
-              </label>
-              <input
-                id="expense-date"
-                type="date"
-                className="w-full px-4 py-2 border border-input rounded-lg bg-background input-focus"
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <label htmlFor="expense-category" className="text-sm font-medium">
-                Category
-              </label>
-              <select
-                id="expense-category"
-                className="w-full px-4 py-2 border border-input rounded-lg bg-background input-focus"
+      {isReviewModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white dark:bg-gray-900 rounded-xl shadow-elevation max-w-md w-full">
+            <div className="p-6 border-b border-border flex items-center justify-between">
+              <h2 className="text-xl font-semibold">
+                {reviewAction === 'approve' ? 'Approve Application' : 'Request Changes'}
+              </h2>
+              <button
+                onClick={() => setIsReviewModalOpen(false)}
+                className="h-8 w-8 rounded-md flex items-center justify-center hover:bg-muted transition-colors"
               >
-                <option value="Material">Material</option>
-                <option value="Labor">Labor</option>
-                <option value="Equipment">Equipment</option>
-                <option value="Misc">Misc</option>
-              </select>
+                <X size={18} />
+              </button>
             </div>
-            
-            <div className="space-y-2">
-              <label htmlFor="expense-receipt" className="text-sm font-medium">
-                Receipt
-              </label>
-              <div className="border border-dashed border-input rounded-lg p-4 bg-background">
-                <div className="flex flex-col items-center justify-center">
-                  <Upload size={24} className="text-muted-foreground mb-2" />
-                  <p className="text-sm text-muted-foreground mb-2">
-                    Drag & drop a file or browse
-                  </p>
-                  <input
-                    id="expense-receipt"
-                    type="file"
-                    className="hidden"
-                  />
-                  <CustomButton size="sm" variant="outline" onClick={() => document.getElementById('expense-receipt')?.click()}>
-                    Browse Files
-                  </CustomButton>
-                </div>
+            <div className="p-6 space-y-4">
+              <div className="space-y-2">
+                <label htmlFor="review-comments" className="text-sm font-medium">
+                  {reviewAction === 'approve' ? 'Comments (Optional)' : 'Comments for Contractor'}
+                </label>
+                <textarea
+                  id="review-comments"
+                  value={reviewComment}
+                  onChange={(e) => setReviewComment(e.target.value)}
+                  placeholder={reviewAction === 'approve' ? 
+                    "Add any comments about this approval" : 
+                    "Explain what changes the contractor needs to make"
+                  }
+                  className="w-full px-4 py-2 border border-input rounded-lg bg-background input-focus h-32 resize-none"
+                  required={reviewAction === 'reject'}
+                ></textarea>
               </div>
             </div>
-            
-            <div className="space-y-2">
-              <label htmlFor="expense-comments" className="text-sm font-medium">
-                Comments (Optional)
-              </label>
-              <textarea
-                id="expense-comments"
-                placeholder="Add any additional details about this expense"
-                className="w-full px-4 py-2 border border-input rounded-lg bg-background input-focus h-24 resize-none"
-              ></textarea>
+            <div className="p-6 border-t border-border flex justify-end gap-2">
+              <CustomButton variant="outline" onClick={() => setIsReviewModalOpen(false)}>
+                Cancel
+              </CustomButton>
+              <CustomButton 
+                onClick={submitReview}
+                variant={reviewAction === 'approve' ? 'default' : 'destructive'}
+              >
+                {reviewAction === 'approve' ? (
+                  <>
+                    <Check size={16} className="mr-2" /> Submit Approval
+                  </>
+                ) : (
+                  <>
+                    <X size={16} className="mr-2" /> Request Changes
+                  </>
+                )}
+              </CustomButton>
             </div>
           </div>
-          <div className="p-6 border-t border-border flex justify-end gap-2">
-            <CustomButton variant="outline" onClick={closeExpenseModal}>
-              Cancel
-            </CustomButton>
-            <CustomButton onClick={closeExpenseModal}>
-              Save Expense
-            </CustomButton>
-          </div>
         </div>
-      </div>
-
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-        <div className="bg-white dark:bg-gray-900 rounded-xl shadow-elevation max-w-md w-full">
-          <div className="p-6 border-b border-border flex items-center justify-between">
-            <h2 className="text-xl font-semibold">
-              {reviewAction === 'approve' ? 'Approve Application' : 'Request Changes'}
-            </h2>
-            <button
-              onClick={() => setIsReviewModalOpen(false)}
-              className="h-8 w-8 rounded-md flex items-center justify-center hover:bg-muted transition-colors"
-            >
-              <X size={18} />
-            </button>
-          </div>
-          <div className="p-6 space-y-4">
-            <div className="space-y-2">
-              <label htmlFor="review-comments" className="text-sm font-medium">
-                {reviewAction === 'approve' ? 'Comments (Optional)' : 'Comments for Contractor'}
-              </label>
-              <textarea
-                id="review-comments"
-                value={reviewComment}
-                onChange={(e) => setReviewComment(e.target.value)}
-                placeholder={reviewAction === 'approve' ? 
-                  "Add any comments about this approval" : 
-                  "Explain what changes the contractor needs to make"
-                }
-                className="w-full px-4 py-2 border border-input rounded-lg bg-background input-focus h-32 resize-none"
-                required={reviewAction === 'reject'}
-              ></textarea>
-            </div>
-          </div>
-          <div className="p-6 border-t border-border flex justify-end gap-2">
-            <CustomButton variant="outline" onClick={() => setIsReviewModalOpen(false)}>
-              Cancel
-            </CustomButton>
-            <CustomButton 
-              onClick={submitReview}
-              variant={reviewAction === 'approve' ? 'default' : 'destructive'}
-            >
-              {reviewAction === 'approve' ? (
-                <>
-                  <Check size={16} className="mr-2" /> Submit Approval
-                </>
-              ) : (
-                <>
-                  <X size={16} className="mr-2" /> Request Changes
-                </>
-              )}
-            </CustomButton>
-          </div>
-        </div>
-      </div>
+      )}
     </div>
   );
 };
