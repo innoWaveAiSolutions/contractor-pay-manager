@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Link, useParams } from 'react-router-dom';
@@ -76,11 +77,141 @@ interface PayApplication {
 }
 
 const mockLineItems: LineItem[] = [
-  // ... keep existing mock line items data
+  {
+    id: "1",
+    itemNo: "1.01",
+    description: "Foundation Work",
+    scheduledValue: "$25,000.00",
+    fromPreviousApplication: "$10,000.00",
+    thisPeriod: "$5,000.00",
+    materialsPresent: "$0.00",
+    totalCompleted: "$15,000.00",
+    percentage: "60%",
+    balanceToFinish: "$10,000.00",
+    retainage: "$750.00",
+    expenses: [
+      {
+        id: "e1",
+        name: "Concrete Materials",
+        amount: "$2,450.00",
+        date: "2023-10-05",
+        category: "Material",
+        comments: "Purchase of high-grade concrete for foundation pouring. Includes delivery fee and taxes.",
+        receipt: "receipt1.pdf"
+      },
+      {
+        id: "e2",
+        name: "Site Excavation",
+        amount: "$1,800.00",
+        date: "2023-10-02",
+        category: "Labor",
+        comments: "Payment for excavation crew, 2-day work.",
+        receipt: "receipt2.pdf"
+      }
+    ]
+  },
+  {
+    id: "2",
+    itemNo: "1.02",
+    description: "Framing",
+    scheduledValue: "$30,000.00",
+    fromPreviousApplication: "$5,000.00",
+    thisPeriod: "$15,000.00",
+    materialsPresent: "$2,000.00",
+    totalCompleted: "$22,000.00",
+    percentage: "73%",
+    balanceToFinish: "$8,000.00",
+    retainage: "$1,100.00",
+    expenses: [
+      {
+        id: "e3",
+        name: "Lumber Delivery",
+        amount: "$5,250.00",
+        date: "2023-10-12",
+        category: "Material",
+        comments: "Lumber package for wall and roof framing.",
+        receipt: "receipt3.pdf"
+      },
+      {
+        id: "e4",
+        name: "Framing Crew Labor",
+        amount: "$7,800.00",
+        date: "2023-10-18",
+        category: "Labor",
+        comments: "Framing labor for walls and roof structure, 5 days work.",
+        receipt: "receipt4.pdf"
+      },
+      {
+        id: "e5",
+        name: "Crane Rental",
+        amount: "$1,200.00",
+        date: "2023-10-17",
+        category: "Equipment",
+        comments: "One-day crane rental for roof trusses installation.",
+        receipt: "receipt5.pdf"
+      }
+    ]
+  },
+  {
+    id: "3",
+    itemNo: "1.03",
+    description: "Electrical Work",
+    scheduledValue: "$18,000.00",
+    fromPreviousApplication: "$0.00",
+    thisPeriod: "$8,000.00",
+    materialsPresent: "$3,000.00",
+    totalCompleted: "$11,000.00",
+    percentage: "61%",
+    balanceToFinish: "$7,000.00",
+    retainage: "$550.00",
+    expenses: [
+      {
+        id: "e6",
+        name: "Electrical Materials",
+        amount: "$3,850.00",
+        date: "2023-10-25",
+        category: "Material",
+        comments: "Wiring, panels, and fixtures for first floor electrical.",
+        receipt: "receipt6.pdf"
+      }
+    ]
+  }
 ];
 
 const mockApplicationSummary: PayApplication = {
-  // ... keep existing mock application summary data
+  id: "PA1",
+  projectId: "PROJ123",
+  projectName: "Riverfront Office Building",
+  contractor: "ABC Construction Inc.",
+  submittedDate: "2023-11-01",
+  periodFrom: "2023-10-01",
+  periodTo: "2023-10-31",
+  amount: "$28,000.00",
+  status: "pending_review",
+  reviewers: ["John Smith", "Emily Rodriguez", "Michael Chen"],
+  currentReviewer: "Emily Rodriguez",
+  totalContractSum: "$125,000.00",
+  currentPayment: "$28,000.00",
+  previousPayments: "$15,000.00",
+  balance: "$82,000.00",
+  retainage: "$2,400.00",
+  reviewChain: [
+    {
+      name: "John Smith",
+      role: "Project Manager",
+      status: "approved"
+    },
+    {
+      name: "Emily Rodriguez",
+      role: "Financial Analyst",
+      status: "reviewing"
+    },
+    {
+      name: "Michael Chen",
+      role: "Director",
+      status: "pending"
+    }
+  ]
 };
 
 const PayApplicationDetails = () => {
