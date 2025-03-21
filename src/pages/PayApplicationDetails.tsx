@@ -11,7 +11,10 @@ import {
   Clock, 
   PlusCircle, 
   Upload,
-  DollarSign
+  DollarSign,
+  ChevronDown,
+  ChevronUp,
+  Plus
 } from 'lucide-react';
 import Sidebar from '@/components/layout/Sidebar';
 import { useAuth } from '@/contexts/AuthContext';
@@ -19,21 +22,22 @@ import { useApi } from '@/hooks/use-api';
 import { CustomButton } from '@/components/ui/custom-button';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
-// Mock pay application data
+// Mock line items data
 const mockLineItems = [
   {
     id: '1',
     itemNo: 'A-01',
-    description: 'Site Work & Excavation',
-    scheduledValue: '$45,000.00',
-    fromPreviousApplication: '$23,000.00',
-    thisPeriod: '$12,000.00',
+    description: 'Site Preparation',
+    scheduledValue: '$25,000.00',
+    fromPreviousApplication: '$25,000.00',
+    thisPeriod: '$0.00',
     materialsPresent: '$0.00',
-    totalCompleted: '$35,000.00',
-    percentage: '78%',
-    balanceToFinish: '$10,000.00',
-    retainage: '$3,500.00',
+    totalCompleted: '$25,000.00',
+    percentage: '100%',
+    balanceToFinish: '$0.00',
+    retainage: '$1,250.00',
     expenses: [
       {
         id: 'exp1',
@@ -53,80 +57,268 @@ const mockLineItems = [
         category: 'Labor',
         receipt: 'receipt2.pdf',
         comments: 'Site preparation team - 4 workers',
-        status: 'pending'
+        status: 'approved'
+      },
+      {
+        id: 'exp3',
+        name: 'Material',
+        amount: '$13,000.00',
+        date: '2023-09-20',
+        category: 'Material',
+        receipt: 'receipt3.pdf',
+        comments: 'Initial site materials',
+        status: 'approved'
       }
     ]
   },
   {
     id: '2',
     itemNo: 'A-02',
-    description: 'Foundation',
-    scheduledValue: '$62,000.00',
-    fromPreviousApplication: '$31,000.00',
-    thisPeriod: '$18,000.00',
-    materialsPresent: '$3,000.00',
-    totalCompleted: '$52,000.00',
-    percentage: '84%',
-    balanceToFinish: '$10,000.00',
-    retainage: '$5,200.00',
+    description: 'Foundation Work',
+    scheduledValue: '$40,000.00',
+    fromPreviousApplication: '$40,000.00',
+    thisPeriod: '$0.00',
+    materialsPresent: '$0.00',
+    totalCompleted: '$40,000.00',
+    percentage: '100%',
+    balanceToFinish: '$0.00',
+    retainage: '$2,000.00',
     expenses: [
       {
-        id: 'exp3',
+        id: 'exp4',
         name: 'Concrete Delivery',
         amount: '$12,500.00',
         date: '2023-09-22',
         category: 'Material',
-        receipt: 'receipt3.pdf',
+        receipt: 'receipt4.pdf',
         comments: 'Foundation concrete pour',
         status: 'approved'
       },
       {
-        id: 'exp4',
+        id: 'exp5',
         name: 'Rebar Installation',
         amount: '$5,500.00',
         date: '2023-09-24',
         category: 'Labor',
-        receipt: 'receipt4.pdf',
+        receipt: 'receipt5.pdf',
         comments: 'Rebar installation labor',
-        status: 'changes_requested'
+        status: 'approved'
+      },
+      {
+        id: 'exp6',
+        name: 'Foundation Equipment',
+        amount: '$22,000.00',
+        date: '2023-09-27',
+        category: 'Equipment',
+        receipt: 'receipt6.pdf',
+        comments: 'Equipment for foundation',
+        status: 'approved'
       }
     ]
   },
   {
     id: '3',
     itemNo: 'A-03',
-    description: 'Framing & Structure',
-    scheduledValue: '$95,000.00',
+    description: 'Framing',
+    scheduledValue: '$35,000.00',
     fromPreviousApplication: '$0.00',
-    thisPeriod: '$45,000.00',
-    materialsPresent: '$20,000.00',
-    totalCompleted: '$65,000.00',
-    percentage: '68%',
-    balanceToFinish: '$30,000.00',
-    retainage: '$6,500.00',
+    thisPeriod: '$25,000.00',
+    materialsPresent: '$0.00',
+    totalCompleted: '$25,000.00',
+    percentage: '71%',
+    balanceToFinish: '$10,000.00',
+    retainage: '$1,250.00',
     expenses: [
       {
-        id: 'exp5',
+        id: 'exp7',
         name: 'Lumber Package',
-        amount: '$32,000.00',
+        amount: '$16,000.00',
         date: '2023-10-01',
         category: 'Material',
-        receipt: 'receipt5.pdf',
+        receipt: 'receipt7.pdf',
         comments: 'Complete lumber package for framing',
         status: 'pending'
       },
       {
-        id: 'exp6',
+        id: 'exp8',
         name: 'Framing Crew',
-        amount: '$13,000.00',
+        amount: '$9,000.00',
         date: '2023-10-05',
         category: 'Labor',
-        receipt: 'receipt6.pdf',
+        receipt: 'receipt8.pdf',
         comments: 'Framing labor - 6 workers',
         status: 'pending'
       }
     ]
   },
+  {
+    id: '4',
+    itemNo: 'A-04',
+    description: 'Roofing',
+    scheduledValue: '$28,000.00',
+    fromPreviousApplication: '$0.00',
+    thisPeriod: '$0.00',
+    materialsPresent: '$0.00',
+    totalCompleted: '$0.00',
+    percentage: '0%',
+    balanceToFinish: '$28,000.00',
+    retainage: '$0.00',
+    expenses: []
+  },
+  {
+    id: '5',
+    itemNo: 'A-05',
+    description: 'Exterior Walls & Siding',
+    scheduledValue: '$32,000.00',
+    fromPreviousApplication: '$0.00',
+    thisPeriod: '$0.00',
+    materialsPresent: '$0.00',
+    totalCompleted: '$0.00',
+    percentage: '0%',
+    balanceToFinish: '$32,000.00',
+    retainage: '$0.00',
+    expenses: []
+  },
+  {
+    id: '6',
+    itemNo: 'A-06',
+    description: 'Windows & Doors',
+    scheduledValue: '$22,000.00',
+    fromPreviousApplication: '$0.00',
+    thisPeriod: '$0.00',
+    materialsPresent: '$0.00',
+    totalCompleted: '$0.00',
+    percentage: '0%',
+    balanceToFinish: '$22,000.00',
+    retainage: '$0.00',
+    expenses: []
+  },
+  {
+    id: '7',
+    itemNo: 'A-07',
+    description: 'HVAC',
+    scheduledValue: '$35,000.00',
+    fromPreviousApplication: '$0.00',
+    thisPeriod: '$0.00',
+    materialsPresent: '$0.00',
+    totalCompleted: '$0.00',
+    percentage: '0%',
+    balanceToFinish: '$35,000.00',
+    retainage: '$0.00',
+    expenses: []
+  },
+  {
+    id: '8',
+    itemNo: 'A-08',
+    description: 'Plumbing',
+    scheduledValue: '$28,000.00',
+    fromPreviousApplication: '$0.00',
+    thisPeriod: '$0.00',
+    materialsPresent: '$0.00',
+    totalCompleted: '$0.00',
+    percentage: '0%',
+    balanceToFinish: '$28,000.00',
+    retainage: '$0.00',
+    expenses: []
+  },
+  {
+    id: '9',
+    itemNo: 'A-09',
+    description: 'Electrical',
+    scheduledValue: '$32,000.00',
+    fromPreviousApplication: '$0.00',
+    thisPeriod: '$0.00',
+    materialsPresent: '$0.00',
+    totalCompleted: '$0.00',
+    percentage: '0%',
+    balanceToFinish: '$32,000.00',
+    retainage: '$0.00',
+    expenses: []
+  },
+  {
+    id: '10',
+    itemNo: 'A-10',
+    description: 'Insulation',
+    scheduledValue: '$15,000.00',
+    fromPreviousApplication: '$0.00',
+    thisPeriod: '$0.00',
+    materialsPresent: '$0.00',
+    totalCompleted: '$0.00',
+    percentage: '0%',
+    balanceToFinish: '$15,000.00',
+    retainage: '$0.00',
+    expenses: []
+  },
+  {
+    id: '11',
+    itemNo: 'A-11',
+    description: 'Drywall & Painting',
+    scheduledValue: '$26,000.00',
+    fromPreviousApplication: '$0.00',
+    thisPeriod: '$0.00',
+    materialsPresent: '$0.00',
+    totalCompleted: '$0.00',
+    percentage: '0%',
+    balanceToFinish: '$26,000.00',
+    retainage: '$0.00',
+    expenses: []
+  },
+  {
+    id: '12',
+    itemNo: 'A-12',
+    description: 'Flooring',
+    scheduledValue: '$18,000.00',
+    fromPreviousApplication: '$0.00',
+    thisPeriod: '$0.00',
+    materialsPresent: '$0.00',
+    totalCompleted: '$0.00',
+    percentage: '0%',
+    balanceToFinish: '$18,000.00',
+    retainage: '$0.00',
+    expenses: []
+  },
+  {
+    id: '13',
+    itemNo: 'A-13',
+    description: 'Cabinets & Countertops',
+    scheduledValue: '$22,000.00',
+    fromPreviousApplication: '$0.00',
+    thisPeriod: '$0.00',
+    materialsPresent: '$0.00',
+    totalCompleted: '$0.00',
+    percentage: '0%',
+    balanceToFinish: '$22,000.00',
+    retainage: '$0.00',
+    expenses: []
+  },
+  {
+    id: '14',
+    itemNo: 'A-14',
+    description: 'Fixtures & Appliances',
+    scheduledValue: '$15,000.00',
+    fromPreviousApplication: '$0.00',
+    thisPeriod: '$0.00',
+    materialsPresent: '$0.00',
+    totalCompleted: '$0.00',
+    percentage: '0%',
+    balanceToFinish: '$15,000.00',
+    retainage: '$0.00',
+    expenses: []
+  },
+  {
+    id: '15',
+    itemNo: 'A-15',
+    description: 'Landscaping & Exterior Finishing',
+    scheduledValue: '$18,000.00',
+    fromPreviousApplication: '$0.00',
+    thisPeriod: '$0.00',
+    materialsPresent: '$0.00',
+    totalCompleted: '$0.00',
+    percentage: '0%',
+    balanceToFinish: '$18,000.00',
+    retainage: '$0.00',
+    expenses: []
+  }
 ];
 
 // Application summary data
@@ -159,13 +351,14 @@ const PayApplicationDetails = () => {
   const [application, setApplication] = useState(mockApplicationSummary);
   const [lineItems, setLineItems] = useState(mockLineItems);
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedLineItem, setSelectedLineItem] = useState<any>(null);
+  const [openLineItems, setOpenLineItems] = useState<string[]>([]);
   const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false);
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
   const [reviewAction, setReviewAction] = useState('');
   const [reviewComment, setReviewComment] = useState('');
   const [showReceipt, setShowReceipt] = useState(false);
   const [selectedReceipt, setSelectedReceipt] = useState('');
+  const [selectedLineItemForExpense, setSelectedLineItemForExpense] = useState<any>(null);
 
   useEffect(() => {
     // Simulate API call to get application details
@@ -187,6 +380,16 @@ const PayApplicationDetails = () => {
     
     fetchData();
   }, [id]);
+
+  const toggleLineItem = (id: string) => {
+    setOpenLineItems(prev => {
+      if (prev.includes(id)) {
+        return prev.filter(itemId => itemId !== id);
+      } else {
+        return [...prev, id];
+      }
+    });
+  };
 
   const handleApproveApplication = () => {
     // Open review modal with approve action
@@ -219,12 +422,14 @@ const PayApplicationDetails = () => {
     }
   };
 
-  const handleAddExpense = () => {
+  const handleAddExpense = (lineItem: any) => {
+    setSelectedLineItemForExpense(lineItem);
     setIsExpenseModalOpen(true);
   };
 
   const closeExpenseModal = () => {
     setIsExpenseModalOpen(false);
+    setSelectedLineItemForExpense(null);
   };
 
   const closeReceipt = () => {
@@ -261,28 +466,6 @@ const PayApplicationDetails = () => {
     );
   };
 
-  const LineItemCard = ({ item }: { item: any }) => (
-    <div 
-      className="bg-white dark:bg-gray-900 rounded-xl overflow-hidden shadow-card hover:shadow-elevation transition-all duration-300 cursor-pointer"
-      onClick={() => setSelectedLineItem(item)}
-    >
-      <div className="p-6">
-        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
-          <div>
-            <h3 className="font-medium text-lg">{item.itemNo}: {item.description}</h3>
-            <p className="text-muted-foreground">Scheduled Value: {item.scheduledValue}</p>
-          </div>
-          <div className="flex flex-col items-end">
-            <div className="text-sm font-medium">This Period: {item.thisPeriod}</div>
-            <div className="text-sm text-muted-foreground">
-              Total: {item.totalCompleted} ({item.percentage})
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-
   return (
     <div className="min-h-screen bg-background">
       <Sidebar userRole={user?.role || 'pm'} />
@@ -299,7 +482,7 @@ const PayApplicationDetails = () => {
                 <Link to="/applications" className="text-muted-foreground hover:text-foreground transition-colors">
                   <ArrowLeft size={18} />
                 </Link>
-                <h1 className="text-2xl md:text-3xl font-bold">{application.projectName}</h1>
+                <h1 className="text-2xl md:text-3xl font-bold">Pay Application #{application.id}</h1>
               </div>
 
               <div className="flex flex-wrap items-center gap-3">
@@ -315,7 +498,42 @@ const PayApplicationDetails = () => {
                 </span>
               </div>
             </div>
+            
+            <p className="text-muted-foreground mb-6">
+              {application.projectName} • {application.contractor} • Submitted: {new Date(application.submittedDate).toLocaleDateString()}
+            </p>
           </motion.div>
+
+          {/* Application Summary Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm p-4">
+              <p className="text-sm text-muted-foreground">Total Amount</p>
+              <p className="text-2xl font-bold">{application.currentPayment}</p>
+            </div>
+            <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm p-4">
+              <p className="text-sm text-muted-foreground">Status</p>
+              <div className="mt-1">
+                <span className={cn(
+                  "px-2.5 py-1 rounded-full text-sm font-medium",
+                  application.status === 'approved' ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" :
+                  application.status === 'pending_review' ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400" :
+                  "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                )}>
+                  {application.status === 'approved' ? 'Approved' :
+                   application.status === 'pending_review' ? 'Pending Review' :
+                   'Changes Requested'}
+                </span>
+              </div>
+            </div>
+            <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm p-4">
+              <p className="text-sm text-muted-foreground">Current Reviewer</p>
+              <p className="text-lg font-semibold">{application.currentReviewer}</p>
+            </div>
+            <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm p-4">
+              <p className="text-sm text-muted-foreground">Line Items</p>
+              <p className="text-2xl font-bold">{lineItems.length}</p>
+            </div>
+          </div>
 
           {/* Application Summary */}
           <div className="bg-white dark:bg-gray-900 rounded-xl shadow-card mb-8 p-6">
@@ -394,128 +612,162 @@ const PayApplicationDetails = () => {
             </div>
           </div>
 
-          {/* Line Items Section */}
-          {selectedLineItem ? (
-            <div className="mb-8">
-              <button 
-                onClick={() => setSelectedLineItem(null)}
-                className="mb-4 flex items-center text-sm text-muted-foreground hover:text-foreground"
-              >
-                <ArrowLeft size={16} className="mr-1" /> Back to all line items
-              </button>
-              
-              <div className="bg-white dark:bg-gray-900 rounded-xl shadow-card mb-6">
-                <div className="p-6 border-b border-border">
-                  <h2 className="text-lg font-semibold">{selectedLineItem.itemNo}: {selectedLineItem.description}</h2>
-                </div>
-                
-                <div className="p-6">
-                  <h3 className="font-medium mb-4">Financial Summary</h3>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4 mb-6">
-                    <div>
-                      <p className="text-sm text-muted-foreground">Scheduled Value</p>
-                      <p className="font-medium">{selectedLineItem.scheduledValue}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">From Previous Application</p>
-                      <p className="font-medium">{selectedLineItem.fromPreviousApplication}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">This Period</p>
-                      <p className="font-medium">{selectedLineItem.thisPeriod}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Materials Present</p>
-                      <p className="font-medium">{selectedLineItem.materialsPresent}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Total Completed</p>
-                      <p className="font-medium">{selectedLineItem.totalCompleted}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Percentage</p>
-                      <p className="font-medium">{selectedLineItem.percentage}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Balance to Finish</p>
-                      <p className="font-medium">{selectedLineItem.balanceToFinish}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Retainage</p>
-                      <p className="font-medium">{selectedLineItem.retainage}</p>
-                    </div>
-                  </div>
-                  
-                  <div className="mt-8">
-                    <div className="flex items-center justify-between mb-4">
-                      <h3 className="font-medium">Expenses</h3>
-                      {user?.role === 'contractor' && (
-                        <CustomButton size="sm" onClick={handleAddExpense}>
-                          <PlusCircle size={16} className="mr-2" /> Add Expense
-                        </CustomButton>
-                      )}
+          {/* Line Items */}
+          <div className="mb-8">
+            <h2 className="text-xl font-semibold mb-6">Line Items</h2>
+            
+            <div className="space-y-4">
+              {lineItems.map((item) => (
+                <Collapsible 
+                  key={item.id}
+                  open={openLineItems.includes(item.id)}
+                  onOpenChange={() => toggleLineItem(item.id)}
+                  className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-border overflow-hidden"
+                >
+                  <CollapsibleTrigger className="w-full flex justify-between items-center p-4 hover:bg-muted/40 transition-colors text-left">
+                    <div className="flex-1">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium">#{item.itemNo}</span>
+                            <h3 className="font-medium">{item.description}</h3>
+                          </div>
+                          <p className="text-sm text-muted-foreground">
+                            Scheduled Value: {item.scheduledValue} • {item.percentage} Complete • Balance: {item.balanceToFinish}
+                          </p>
+                        </div>
+                        
+                        <div className="text-right">
+                          <div className="text-lg font-semibold">{item.totalCompleted}</div>
+                          <div className="text-sm text-muted-foreground">Total to Date</div>
+                        </div>
+                      </div>
                     </div>
                     
-                    {selectedLineItem.expenses.length > 0 ? (
-                      <div className="space-y-4">
-                        {selectedLineItem.expenses.map((expense: any) => (
-                          <div 
-                            key={expense.id} 
-                            className="bg-muted/30 dark:bg-muted/10 p-4 rounded-lg border border-border"
-                          >
-                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
-                              <div>
-                                <div className="flex items-center gap-2">
-                                  <h4 className="font-medium">{expense.name}</h4>
-                                  <StatusBadge status={expense.status} />
-                                </div>
-                                <p className="text-sm text-muted-foreground">
-                                  {new Date(expense.date).toLocaleDateString()} • {expense.category}
-                                </p>
-                              </div>
-                              <div className="text-lg font-semibold">
-                                {expense.amount}
-                              </div>
-                            </div>
-                            
-                            {expense.comments && (
-                              <p className="text-sm mb-3">
-                                {expense.comments}
-                              </p>
-                            )}
-                            
-                            <div className="flex items-center gap-2">
-                              <button 
-                                onClick={() => viewReceipt(expense.receipt)}
-                                className="text-xs flex items-center text-primary hover:underline"
-                              >
-                                <FileText size={14} className="mr-1" /> View Receipt
-                              </button>
-                            </div>
-                          </div>
-                        ))}
+                    <div className="ml-4">
+                      {openLineItems.includes(item.id) ? (
+                        <ChevronUp size={20} className="text-muted-foreground" />
+                      ) : (
+                        <ChevronDown size={20} className="text-muted-foreground" />
+                      )}
+                    </div>
+                  </CollapsibleTrigger>
+                  
+                  <CollapsibleContent>
+                    <div className="p-4 pt-0 border-t border-border">
+                      {/* Financial Summary Table */}
+                      <div className="overflow-x-auto mt-4">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b border-border">
+                              <th className="text-left py-2 font-medium text-muted-foreground">ITEM NO.</th>
+                              <th className="text-left py-2 font-medium text-muted-foreground">DESCRIPTION</th>
+                              <th className="text-right py-2 font-medium text-muted-foreground">SCHEDULED VALUE</th>
+                              <th className="text-right py-2 font-medium text-muted-foreground">FROM PREVIOUS<br/>APPLICATION</th>
+                              <th className="text-right py-2 font-medium text-muted-foreground">THIS PERIOD</th>
+                              <th className="text-right py-2 font-medium text-muted-foreground">MATERIALS<br/>PRESENTLY STORED</th>
+                              <th className="text-right py-2 font-medium text-muted-foreground">TOTAL COMPLETED<br/>TO DATE</th>
+                              <th className="text-right py-2 font-medium text-muted-foreground">%</th>
+                              <th className="text-right py-2 font-medium text-muted-foreground">BALANCE<br/>TO FINISH</th>
+                              <th className="text-right py-2 font-medium text-muted-foreground">RETAINAGE</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <tr>
+                              <td className="py-3">{item.itemNo}</td>
+                              <td className="py-3">{item.description}</td>
+                              <td className="py-3 text-right">{item.scheduledValue}</td>
+                              <td className="py-3 text-right">{item.fromPreviousApplication}</td>
+                              <td className="py-3 text-right">{item.thisPeriod}</td>
+                              <td className="py-3 text-right">{item.materialsPresent}</td>
+                              <td className="py-3 text-right">{item.totalCompleted}</td>
+                              <td className="py-3 text-right">{item.percentage}</td>
+                              <td className="py-3 text-right">{item.balanceToFinish}</td>
+                              <td className="py-3 text-right">{item.retainage}</td>
+                            </tr>
+                          </tbody>
+                        </table>
                       </div>
-                    ) : (
-                      <div className="text-center py-8 bg-muted/20 rounded-lg border border-dashed border-border">
-                        <DollarSign size={32} className="mx-auto text-muted-foreground opacity-20 mb-2" />
-                        <p className="text-muted-foreground">No expenses added yet</p>
-                        {user?.role === 'contractor' && (
-                          <CustomButton 
-                            size="sm" 
-                            variant="outline" 
-                            className="mt-3"
-                            onClick={handleAddExpense}
-                          >
-                            <PlusCircle size={16} className="mr-2" /> Add Expense
-                          </CustomButton>
+                      
+                      {/* Expenses Section */}
+                      <div className="mt-6">
+                        <div className="flex items-center justify-between mb-3">
+                          <h4 className="font-medium">Expenses</h4>
+                          {user?.role === 'contractor' && (
+                            <CustomButton 
+                              size="sm" 
+                              onClick={() => handleAddExpense(item)}
+                              className="h-8"
+                            >
+                              <Plus size={16} className="mr-2" /> Add Expense
+                            </CustomButton>
+                          )}
+                        </div>
+                        
+                        {item.expenses.length > 0 ? (
+                          <div className="space-y-3">
+                            {item.expenses.map((expense: any) => (
+                              <div 
+                                key={expense.id} 
+                                className="bg-muted/30 dark:bg-muted/10 p-3 rounded-lg border border-border"
+                              >
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                                  <div>
+                                    <div className="flex items-center gap-2">
+                                      <h5 className="font-medium">{expense.name}</h5>
+                                      <StatusBadge status={expense.status} />
+                                    </div>
+                                    <p className="text-sm text-muted-foreground">
+                                      {new Date(expense.date).toLocaleDateString()} • {expense.category}
+                                    </p>
+                                  </div>
+                                  <div className="text-lg font-semibold">
+                                    {expense.amount}
+                                  </div>
+                                </div>
+                                
+                                {expense.comments && (
+                                  <p className="text-sm mt-2">
+                                    {expense.comments}
+                                  </p>
+                                )}
+                                
+                                <div className="flex items-center gap-2 mt-2">
+                                  <button 
+                                    onClick={() => viewReceipt(expense.receipt)}
+                                    className="text-xs flex items-center text-primary hover:underline"
+                                  >
+                                    <FileText size={14} className="mr-1" /> View Receipt
+                                  </button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="text-center py-6 bg-muted/20 rounded-lg border border-dashed border-border">
+                            <DollarSign size={24} className="mx-auto text-muted-foreground opacity-20 mb-2" />
+                            <p className="text-muted-foreground">No expenses added yet</p>
+                            {user?.role === 'contractor' && (
+                              <CustomButton 
+                                size="sm" 
+                                variant="outline" 
+                                className="mt-3"
+                                onClick={() => handleAddExpense(item)}
+                              >
+                                <Plus size={16} className="mr-2" /> Add Expense
+                              </CustomButton>
+                            )}
+                          </div>
                         )}
                       </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-              
+                    </div>
+                  </CollapsibleContent>
+                </Collapsible>
+              ))}
+            </div>
+            
+            {/* Action Buttons */}
+            <div className="mt-8">
               {/* Reviewer Actions */}
               {user?.role === 'reviewer' && (
                 <div className="flex justify-end gap-3">
@@ -549,16 +801,7 @@ const PayApplicationDetails = () => {
                 </div>
               )}
             </div>
-          ) : (
-            <div className="mb-8">
-              <h2 className="text-xl font-semibold mb-6">Line Items</h2>
-              <div className="grid grid-cols-1 gap-4">
-                {lineItems.map((item) => (
-                  <LineItemCard key={item.id} item={item} />
-                ))}
-              </div>
-            </div>
-          )}
+          </div>
         </div>
       </main>
 
@@ -607,7 +850,9 @@ const PayApplicationDetails = () => {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="bg-white dark:bg-gray-900 rounded-xl shadow-elevation max-w-md w-full">
             <div className="p-6 border-b border-border flex items-center justify-between">
-              <h2 className="text-xl font-semibold">Add Expense</h2>
+              <h2 className="text-xl font-semibold">
+                Add Expense to {selectedLineItemForExpense?.description}
+              </h2>
               <button
                 onClick={closeExpenseModal}
                 className="h-8 w-8 rounded-md flex items-center justify-center hover:bg-muted transition-colors"
@@ -771,3 +1016,4 @@ const PayApplicationDetails = () => {
 };
 
 export default PayApplicationDetails;
+
