@@ -6,7 +6,11 @@ const Logout = () => {
   const { logout } = useAuth();
 
   useEffect(() => {
-    logout();
+    const performLogout = async () => {
+      await logout();
+    };
+    
+    performLogout();
   }, [logout]);
 
   return (

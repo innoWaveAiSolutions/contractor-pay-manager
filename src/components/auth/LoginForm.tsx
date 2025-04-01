@@ -25,16 +25,6 @@ const LoginForm = () => {
       <div className="text-center space-y-2">
         <h1 className="text-2xl font-semibold tracking-tight">Welcome back</h1>
         <p className="text-muted-foreground">Enter your credentials to sign in to your account</p>
-        <div className="pt-2 text-xs text-muted-foreground">
-          <p className="mb-1">For demo, use an email that includes:</p>
-          <ul className="space-y-1">
-            <li><strong>director@example.com</strong>: For Director role</li>
-            <li><strong>pm@example.com</strong>: For Project Manager role</li>
-            <li><strong>reviewer@example.com</strong>: For Reviewer role</li>
-            <li><strong>contractor@example.com</strong>: For Contractor role</li>
-            <li>Any password will work</li>
-          </ul>
-        </div>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">

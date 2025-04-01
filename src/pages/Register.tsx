@@ -13,6 +13,7 @@ const Register = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [role, setRole] = useState<UserRole>('contractor');
   const [showPassword, setShowPassword] = useState(false);
+  const [organizationName, setOrganizationName] = useState('');
   const { register, isLoading } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -107,6 +108,23 @@ const Register = () => {
                 <option value="director">Director</option>
               </select>
             </div>
+
+            {role === 'director' && (
+              <div className="space-y-2">
+                <label htmlFor="organizationName" className="text-sm font-medium">
+                  Organization Name
+                </label>
+                <input
+                  id="organizationName"
+                  type="text"
+                  value={organizationName}
+                  onChange={(e) => setOrganizationName(e.target.value)}
+                  placeholder="Your Company Name"
+                  required
+                  className="w-full px-4 py-2 border border-input rounded-lg bg-background input-focus"
+                />
+              </div>
+            )}
 
             <div className="space-y-2">
               <label htmlFor="password" className="text-sm font-medium">

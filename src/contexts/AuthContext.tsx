@@ -8,6 +8,8 @@ import {
 } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
+import { User as SupabaseUser, Session } from '@supabase/supabase-js';
 
 // Define user role types
 export type UserRole = 'pm' | 'contractor' | 'reviewer' | 'director';
@@ -18,7 +20,7 @@ export interface User {
   name: string;
   email: string;
   role: UserRole;
-  organizationId?: string;
+  organizationId?: string | number;
   organizationName?: string;
 }
 
@@ -29,7 +31,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (name: string, email: string, password: string, role: UserRole) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
 }
 
 // Create the authentication context
@@ -44,95 +46,100 @@ export const useAuth = () => {
   return context;
 };
 
-// Mock API functions (to be replaced with actual backend API calls)
-const mockLogin = async (email: string, password: string): Promise<User> => {
-  // Simulate API call delay
-  await new Promise(resolve => setTimeout(resolve, 1000));
-  
-  // For demo, create different users based on email
-  if (email.includes('director')) {
-    return {
-      id: 'd1',
-      name: 'Director User',
-      email,
-      role: 'director',
-      organizationId: 'org1',
-      organizationName: 'Demo Organization'
-    };
-  } else if (email.includes('pm')) {
-    return {
-      id: 'pm1',
-      name: 'Project Manager',
-      email,
-      role: 'pm',
-      organizationId: 'org1',
-      organizationName: 'Demo Organization'
-    };
-  } else if (email.includes('reviewer')) {
-    return {
-      id: 'r1',
-      name: 'Reviewer User',
-      email,
-      role: 'reviewer',
-      organizationId: 'org1',
-      organizationName: 'Demo Organization'
-    };
-  } else {
-    return {
-      id: 'c1',
-      name: 'Contractor User',
-      email,
-      role: 'contractor',
-      organizationId: 'org1',
-      organizationName: 'Demo Organization'
-    };
-  }
-};
-
-const mockRegister = async (
-  name: string, 
-  email: string, 
-  password: string, 
-  role: UserRole
-): Promise<User> => {
-  // Simulate API call delay
-  await new Promise(resolve => setTimeout(resolve, 1000));
-  
-  return {
-    id: Math.random().toString(36).substring(2, 9),
-    name,
-    email,
-    role,
-    organizationId: role === 'director' ? Math.random().toString(36).substring(2, 9) : undefined,
-    organizationName: role === 'director' ? 'New Organization' : undefined
-  };
-};
-
 // Auth Provider component
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
 
-  // Check if user is already logged in
+  // Set up auth state listener and check for existing session
   useEffect(() => {
-    const storedUser = localStorage.getItem('user');
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
-    }
-    setIsLoading(false);
+    // Set up auth state listener FIRST
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        setSession(session);
+        if (session?.user) {
+          // We'll fetch user profile data in a separate effect
+          setIsLoading(true);
+        } else {
+          setUser(null);
+          setIsLoading(false);
+        }
+      }
+    );
+
+    // THEN check for existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      if (!session?.user) {
+        setIsLoading(false);
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
+
+  // Fetch user profile data when session changes
+  useEffect(() => {
+    const fetchUserProfile = async (supabaseUser: SupabaseUser) => {
+      try {
+        const { data, error } = await supabase
+          .from('users')
+          .select(`
+            id, 
+            first_name, 
+            last_name, 
+            email, 
+            role,
+            organization_id,
+            organizations:organization_id (name)
+          `)
+          .eq('email', supabaseUser.email)
+          .single();
+
+        if (error) {
+          console.error('Error fetching user profile:', error);
+          setUser(null);
+        } else if (data) {
+          setUser({
+            id: data.id.toString(),
+            name: `${data.first_name || ''} ${data.last_name || ''}`.trim() || supabaseUser.email?.split('@')[0] || 'User',
+            email: data.email,
+            role: data.role as UserRole || 'contractor',
+            organizationId: data.organization_id,
+            organizationName: data.organizations?.name
+          });
+        }
+      } catch (error) {
+        console.error('Failed to fetch user profile:', error);
+        setUser(null);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    if (session?.user) {
+      fetchUserProfile(session.user);
+    }
+  }, [session]);
 
   const login = async (email: string, password: string) => {
     try {
       setIsLoading(true);
-      const userData = await mockLogin(email, password);
-      setUser(userData);
-      localStorage.setItem('user', JSON.stringify(userData));
-      toast.success(`Welcome back, ${userData.name}!`);
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
+      
+      if (error) {
+        throw error;
+      }
+      
+      toast.success('Login successful!');
       navigate('/dashboard');
-    } catch (error) {
-      toast.error('Login failed. Please check your credentials.');
+    } catch (error: any) {
+      toast.error(`Login failed: ${error.message}`);
       throw error;
     } finally {
       setIsLoading(false);
@@ -142,24 +149,95 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const register = async (name: string, email: string, password: string, role: UserRole) => {
     try {
       setIsLoading(true);
-      const userData = await mockRegister(name, email, password, role);
-      setUser(userData);
-      localStorage.setItem('user', JSON.stringify(userData));
+      
+      // Extract first and last name
+      const nameParts = name.split(' ');
+      const firstName = nameParts[0];
+      const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
+      
+      // Sign up the user with Supabase Auth
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            first_name: firstName,
+            last_name: lastName,
+            role: role
+          }
+        }
+      });
+      
+      if (authError) {
+        throw authError;
+      }
+
+      if (authData.user && role === 'director') {
+        // Create a new organization if the user is a director
+        const { data: orgData, error: orgError } = await supabase
+          .from('organizations')
+          .insert([{
+            name: `${firstName}'s Organization`,
+            created_by: null // We'll update this after we have the user's ID
+          }])
+          .select('id')
+          .single();
+
+        if (orgError) {
+          throw orgError;
+        }
+
+        // Update the user's organization_id
+        const { error: userUpdateError } = await supabase
+          .from('users')
+          .update({ organization_id: orgData.id })
+          .eq('email', email);
+
+        if (userUpdateError) {
+          throw userUpdateError;
+        }
+
+        // Update the organization's created_by field with the user's ID
+        const { data: userData, error: userFetchError } = await supabase
+          .from('users')
+          .select('id')
+          .eq('email', email)
+          .single();
+
+        if (userFetchError) {
+          throw userFetchError;
+        }
+
+        const { error: orgUpdateError } = await supabase
+          .from('organizations')
+          .update({ created_by: userData.id })
+          .eq('id', orgData.id);
+
+        if (orgUpdateError) {
+          throw orgUpdateError;
+        }
+      }
+
       toast.success('Account created successfully!');
       navigate('/dashboard');
-    } catch (error) {
-      toast.error('Registration failed. Please try again.');
+    } catch (error: any) {
+      toast.error(`Registration failed: ${error.message}`);
       throw error;
     } finally {
       setIsLoading(false);
     }
   };
 
-  const logout = () => {
-    localStorage.removeItem('user');
-    setUser(null);
-    toast.info('You have been logged out.');
-    navigate('/login');
+  const logout = async () => {
+    try {
+      await supabase.auth.signOut();
+      setUser(null);
+      toast.info('You have been logged out.');
+      navigate('/login');
+    } catch (error) {
+      console.error('Logout failed:', error);
+      toast.error('Logout failed. Please try again.');
+    }
   };
 
   return (
