@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { Eye, EyeOff, ArrowRight } from 'lucide-react';
 import { CustomButton } from '@/components/ui/custom-button';
 import { useAuth } from '@/contexts/AuthContext';
+import { toast } from 'sonner';
 
 const LoginForm = () => {
   const [email, setEmail] = useState('');

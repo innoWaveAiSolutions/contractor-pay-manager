@@ -402,7 +402,17 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      check_user_organization: {
+        Args: {
+          user_email: string
+          org_id: number
+        }
+        Returns: boolean
+      }
+      get_current_user_organization_id: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
     }
     Enums: {
       [_ in never]: never

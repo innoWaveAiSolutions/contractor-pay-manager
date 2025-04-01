@@ -30,7 +30,7 @@ interface AuthContextType {
   isLoading: boolean;
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (name: string, email: string, password: string, role: UserRole) => Promise<void>;
+  register: (name: string, email: string, password: string, role: UserRole, organizationName?: string) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -84,37 +84,40 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     const fetchUserProfile = async (supabaseUser: SupabaseUser) => {
       try {
-        const { data, error } = await supabase
-          .from('users')
-          .select(`
-            id, 
-            first_name, 
-            last_name, 
-            email, 
-            role,
-            organization_id,
-            organizations:organization_id (name)
-          `)
-          .eq('email', supabaseUser.email)
-          .single();
+        // Use a setTimeout to prevent recursion issues with onAuthStateChange
+        setTimeout(async () => {
+          const { data, error } = await supabase
+            .from('users')
+            .select(`
+              id, 
+              first_name, 
+              last_name, 
+              email, 
+              role,
+              organization_id,
+              organizations:organization_id (name)
+            `)
+            .eq('email', supabaseUser.email)
+            .maybeSingle();
 
-        if (error) {
-          console.error('Error fetching user profile:', error);
-          setUser(null);
-        } else if (data) {
-          setUser({
-            id: data.id.toString(),
-            name: `${data.first_name || ''} ${data.last_name || ''}`.trim() || supabaseUser.email?.split('@')[0] || 'User',
-            email: data.email,
-            role: data.role as UserRole || 'contractor',
-            organizationId: data.organization_id,
-            organizationName: data.organizations?.name
-          });
-        }
+          if (error) {
+            console.error('Error fetching user profile:', error);
+            setUser(null);
+          } else if (data) {
+            setUser({
+              id: data.id.toString(),
+              name: `${data.first_name || ''} ${data.last_name || ''}`.trim() || supabaseUser.email?.split('@')[0] || 'User',
+              email: data.email,
+              role: data.role as UserRole || 'contractor',
+              organizationId: data.organization_id,
+              organizationName: data.organizations?.name
+            });
+          }
+          setIsLoading(false);
+        }, 0);
       } catch (error) {
         console.error('Failed to fetch user profile:', error);
         setUser(null);
-      } finally {
         setIsLoading(false);
       }
     };
@@ -146,7 +149,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const register = async (name: string, email: string, password: string, role: UserRole) => {
+  const register = async (name: string, email: string, password: string, role: UserRole, organizationName?: string) => {
     try {
       setIsLoading(true);
       
@@ -172,13 +175,27 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         throw authError;
       }
 
-      if (authData.user && role === 'director') {
-        // Create a new organization if the user is a director
+      if (authData.user && role === 'director' && organizationName) {
+        // Wait a moment for the user record to be created by the trigger
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // Fetch the newly created user's ID
+        const { data: userData, error: userFetchError } = await supabase
+          .from('users')
+          .select('id')
+          .eq('email', email)
+          .single();
+
+        if (userFetchError) {
+          throw userFetchError;
+        }
+
+        // Create a new organization
         const { data: orgData, error: orgError } = await supabase
           .from('organizations')
           .insert([{
-            name: `${firstName}'s Organization`,
-            created_by: null // We'll update this after we have the user's ID
+            name: organizationName,
+            created_by: userData.id
           }])
           .select('id')
           .single();
@@ -191,30 +208,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const { error: userUpdateError } = await supabase
           .from('users')
           .update({ organization_id: orgData.id })
-          .eq('email', email);
+          .eq('id', userData.id);
 
         if (userUpdateError) {
           throw userUpdateError;
-        }
-
-        // Update the organization's created_by field with the user's ID
-        const { data: userData, error: userFetchError } = await supabase
-          .from('users')
-          .select('id')
-          .eq('email', email)
-          .single();
-
-        if (userFetchError) {
-          throw userFetchError;
-        }
-
-        const { error: orgUpdateError } = await supabase
-          .from('organizations')
-          .update({ created_by: userData.id })
-          .eq('id', orgData.id);
-
-        if (orgUpdateError) {
-          throw orgUpdateError;
         }
       }
 

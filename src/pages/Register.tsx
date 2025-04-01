@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import { Eye, EyeOff, ArrowRight } from 'lucide-react';
 import { CustomButton } from '@/components/ui/custom-button';
 import { useAuth, UserRole } from '@/contexts/AuthContext';
+import { toast } from 'sonner';
 
 const Register = () => {
   const [name, setName] = useState('');
@@ -20,12 +21,17 @@ const Register = () => {
     e.preventDefault();
     
     if (password !== confirmPassword) {
-      alert('Passwords do not match');
+      toast.error('Passwords do not match');
+      return;
+    }
+    
+    if (role === 'director' && !organizationName) {
+      toast.error('Organization name is required for Directors');
       return;
     }
     
     try {
-      await register(name, email, password, role);
+      await register(name, email, password, role, role === 'director' ? organizationName : undefined);
     } catch (error) {
       console.error('Registration failed:', error);
     }
@@ -120,7 +126,7 @@ const Register = () => {
                   value={organizationName}
                   onChange={(e) => setOrganizationName(e.target.value)}
                   placeholder="Your Company Name"
-                  required
+                  required={role === 'director'}
                   className="w-full px-4 py-2 border border-input rounded-lg bg-background input-focus"
                 />
               </div>
