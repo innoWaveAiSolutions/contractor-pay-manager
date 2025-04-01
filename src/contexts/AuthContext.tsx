@@ -6,7 +6,7 @@ import {
   useEffect, 
   ReactNode 
 } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { User as SupabaseUser, Session } from '@supabase/supabase-js';
@@ -54,16 +54,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
+  const location = useLocation();
 
   // Set up auth state listener and check for existing session
   useEffect(() => {
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
+      (event, session) => {
+        console.log('Auth state changed:', event, session?.user?.email);
         setSession(session);
+        
         if (session?.user) {
-          // We'll fetch user profile data in a separate effect
-          setIsLoading(true);
+          // Use setTimeout to prevent recursion issues with onAuthStateChange
+          setTimeout(() => {
+            fetchUserProfile(session.user);
+          }, 0);
         } else {
           setUser(null);
           setIsLoading(false);
@@ -74,7 +79,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     // THEN check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
-      if (!session?.user) {
+      if (session?.user) {
+        fetchUserProfile(session.user);
+      } else {
         setIsLoading(false);
       }
     });
@@ -82,78 +89,70 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Fetch user profile data when session changes
-  useEffect(() => {
-    const fetchUserProfile = async (supabaseUser: SupabaseUser) => {
-      try {
-        // Use a setTimeout to prevent recursion issues with onAuthStateChange
-        setTimeout(async () => {
-          const { data, error } = await supabase
-            .from('users')
-            .select(`
-              id, 
-              first_name, 
-              last_name, 
-              email, 
-              role,
-              organization_id,
-              organizations:organization_id (name)
-            `)
-            .eq('email', supabaseUser.email)
-            .maybeSingle();
+  // Separate function to fetch user profile data
+  const fetchUserProfile = async (supabaseUser: SupabaseUser) => {
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select(`
+          id, 
+          first_name, 
+          last_name, 
+          email, 
+          role,
+          organization_id,
+          organizations:organization_id (name)
+        `)
+        .eq('email', supabaseUser.email)
+        .maybeSingle();
 
-          if (error) {
-            console.error('Error fetching user profile:', error);
-            setUser(null);
-          } else if (data) {
-            // Check if a director needs onboarding (no organization or no backup director set)
-            let needsOnboarding = false;
-            
-            if (data.role === 'director') {
-              // Check if the organization has a backup_director_id set
-              if (data.organization_id) {
-                const { data: orgData, error: orgError } = await supabase
-                  .from('organizations')
-                  .select('backup_director_id')
-                  .eq('id', data.organization_id)
-                  .single();
-                
-                if (orgError || !orgData.backup_director_id) {
-                  needsOnboarding = true;
-                }
-              } else {
-                needsOnboarding = true;
-              }
-            }
-            
-            setUser({
-              id: data.id.toString(),
-              name: `${data.first_name || ''} ${data.last_name || ''}`.trim() || supabaseUser.email?.split('@')[0] || 'User',
-              email: data.email,
-              role: data.role as UserRole || 'contractor',
-              organizationId: data.organization_id,
-              organizationName: data.organizations?.name,
-              needsOnboarding
-            });
-          }
-          setIsLoading(false);
-          
-          // Redirect based on authentication and onboarding status
-          if (session && window.location.pathname === '/login') {
-            navigate('/dashboard');
-          }
-        }, 0);
-      } catch (error) {
-        console.error('Failed to fetch user profile:', error);
+      if (error) {
+        console.error('Error fetching user profile:', error);
         setUser(null);
-        setIsLoading(false);
+      } else if (data) {
+        // Check if a director needs onboarding (no organization or no backup director set)
+        let needsOnboarding = false;
+        
+        if (data.role === 'director') {
+          // Check if the organization has a backup_director_id set
+          if (data.organization_id) {
+            const { data: orgData, error: orgError } = await supabase
+              .from('organizations')
+              .select('backup_director_id')
+              .eq('id', data.organization_id)
+              .single();
+            
+            if (orgError || !orgData.backup_director_id) {
+              needsOnboarding = true;
+            }
+          } else {
+            needsOnboarding = true;
+          }
+        }
+        
+        setUser({
+          id: data.id.toString(),
+          name: `${data.first_name || ''} ${data.last_name || ''}`.trim() || supabaseUser.email?.split('@')[0] || 'User',
+          email: data.email,
+          role: data.role as UserRole || 'contractor',
+          organizationId: data.organization_id,
+          organizationName: data.organizations?.name,
+          needsOnboarding
+        });
+        
+        // Handle navigation after successful profile fetch
+        if (location.pathname === '/login') {
+          navigate('/dashboard');
+        }
       }
-    };
-
-    if (session?.user) {
-      fetchUserProfile(session.user);
+      
+      setIsLoading(false);
+    } catch (error) {
+      console.error('Failed to fetch user profile:', error);
+      setUser(null);
+      setIsLoading(false);
     }
-  }, [session, navigate]);
+  };
 
   const login = async (email: string, password: string) => {
     try {
@@ -168,12 +167,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
       
       toast.success('Login successful!');
-      navigate('/dashboard');
+      // Navigation is handled in the useEffect when user data is loaded
     } catch (error: any) {
       toast.error(`Login failed: ${error.message}`);
-      throw error;
-    } finally {
       setIsLoading(false);
+      throw error;
     }
   };
 

@@ -15,8 +15,8 @@ const DirectorOnboarding = () => {
   const [backupDirectorEmail, setBackupDirectorEmail] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // If no user or not a director, don't show onboarding
-  if (!user || user.role !== 'director') {
+  // If no user or not a director, or if director doesn't need onboarding, don't show onboarding
+  if (!user || user.role !== 'director' || !user.needsOnboarding) {
     return null;
   }
 

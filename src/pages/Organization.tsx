@@ -20,10 +20,12 @@ const Organization = () => {
 
       try {
         setIsLoading(true);
+        const orgId = typeof user.organizationId === 'string' ? parseInt(user.organizationId, 10) : user.organizationId;
+        
         const { data, error } = await supabase
           .from('organizations')
           .select('*')
-          .eq('id', user.organizationId)
+          .eq('id', orgId)
           .single();
 
         if (error) throw error;
