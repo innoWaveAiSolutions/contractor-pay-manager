@@ -18,6 +18,7 @@ const LoginForm = () => {
       await login(email, password);
     } catch (error) {
       console.error('Login failed:', error);
+      // Error is already handled in the login function
     }
   };
 

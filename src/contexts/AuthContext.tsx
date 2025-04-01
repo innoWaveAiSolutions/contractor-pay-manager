@@ -159,64 +159,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
       
       // Sign up the user with Supabase Auth
-      const { data: authData, error: authError } = await supabase.auth.signUp({
+      const { error } = await supabase.auth.signUp({
         email,
         password,
         options: {
           data: {
             first_name: firstName,
             last_name: lastName,
-            role: role
+            role: role,
+            organization_name: organizationName
           }
         }
       });
       
-      if (authError) {
-        throw authError;
+      if (error) {
+        throw error;
       }
 
-      if (authData.user && role === 'director' && organizationName) {
-        // Wait a moment for the user record to be created by the trigger
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        // Fetch the newly created user's ID
-        const { data: userData, error: userFetchError } = await supabase
-          .from('users')
-          .select('id')
-          .eq('email', email)
-          .single();
-
-        if (userFetchError) {
-          throw userFetchError;
-        }
-
-        // Create a new organization
-        const { data: orgData, error: orgError } = await supabase
-          .from('organizations')
-          .insert([{
-            name: organizationName,
-            created_by: userData.id
-          }])
-          .select('id')
-          .single();
-
-        if (orgError) {
-          throw orgError;
-        }
-
-        // Update the user's organization_id
-        const { error: userUpdateError } = await supabase
-          .from('users')
-          .update({ organization_id: orgData.id })
-          .eq('id', userData.id);
-
-        if (userUpdateError) {
-          throw userUpdateError;
-        }
-      }
-
-      toast.success('Account created successfully!');
-      navigate('/dashboard');
+      toast.success('Registration successful! Please check your email to verify your account.');
+      navigate('/login');
     } catch (error: any) {
       toast.error(`Registration failed: ${error.message}`);
       throw error;
