@@ -17,7 +17,7 @@ export const useApi = () => {
         .from('projects')
         .select('id')
         .eq(user.role === 'contractor' ? 'contractor_id' : 'organization_id', 
-             user.role === 'contractor' ? user.id : user.organizationId);
+             user.role === 'contractor' ? user.id : (user.organizationId ? Number(user.organizationId) : null));
 
       if (projectsError) throw projectsError;
       
@@ -33,11 +33,11 @@ export const useApi = () => {
       
       // Get organization members count if director
       let memberCount = 0;
-      if (user.role === 'director' || user.role === 'pm') {
+      if ((user.role === 'director' || user.role === 'pm') && user.organizationId) {
         const { data: membersData, error: membersError } = await supabase
           .from('users')
           .select('id')
-          .eq('organization_id', user.organizationId);
+          .eq('organization_id', Number(user.organizationId));
           
         if (membersError) throw membersError;
         memberCount = membersData?.length || 0;
@@ -45,11 +45,11 @@ export const useApi = () => {
       
       // For contractors count
       let contractorsCount = 0;
-      if (user.role === 'pm' || user.role === 'director') {
+      if ((user.role === 'pm' || user.role === 'director') && user.organizationId) {
         const { data: contractorsData, error: contractorsError } = await supabase
           .from('users')
           .select('id')
-          .eq('organization_id', user.organizationId)
+          .eq('organization_id', Number(user.organizationId))
           .eq('role', 'contractor');
           
         if (contractorsError) throw contractorsError;
@@ -168,7 +168,7 @@ export const useApi = () => {
   // Get projects based on user role
   const getProjects = async () => {
     try {
-      let query;
+      if (!user) return [];
       
       if (user?.role === 'contractor') {
         // Contractors should only see projects they're assigned to
@@ -184,14 +184,14 @@ export const useApi = () => {
               organizations:organization_id (name)
             )
           `)
-          .eq('contractor_id', user.id);
+          .eq('contractor_id', Number(user.id));
           
         if (error) throw error;
         return data?.map(item => ({
           id: item.projects?.id,
           name: item.projects?.name,
           client: item.projects?.organizations?.name,
-          dueDate: new Date(item.projects?.updated_at).toISOString().split('T')[0],
+          dueDate: item.projects?.updated_at ? new Date(item.projects.updated_at).toISOString().split('T')[0] : '',
           status: 'active',
           totalBudget: '$0', // We'd need to calculate this from pay applications
           contractorsCount: 1,
@@ -211,14 +211,14 @@ export const useApi = () => {
               organizations:organization_id (name)
             )
           `)
-          .eq('reviewer_id', user.id);
+          .eq('reviewer_id', Number(user.id));
           
         if (error) throw error;
         return data?.map(item => ({
           id: item.projects?.id,
           name: item.projects?.name,
           client: item.projects?.organizations?.name,
-          dueDate: new Date(item.projects?.updated_at).toISOString().split('T')[0],
+          dueDate: item.projects?.updated_at ? new Date(item.projects.updated_at).toISOString().split('T')[0] : '',
           status: 'active',
           totalBudget: '$0', // We'd need to calculate this from pay applications
           contractorsCount: 0, // We'd need to calculate this
@@ -226,6 +226,8 @@ export const useApi = () => {
         })) || [];
       } else {
         // PMs and Directors see all projects in their organization
+        if (!user.organizationId) return [];
+        
         const { data, error } = await supabase
           .from('projects')
           .select(`
@@ -235,14 +237,14 @@ export const useApi = () => {
             updated_at,
             organizations:organization_id (name)
           `)
-          .eq('organization_id', user?.organizationId);
+          .eq('organization_id', Number(user.organizationId));
           
         if (error) throw error;
         return data?.map(item => ({
           id: item.id,
           name: item.name,
           client: item.organizations?.name,
-          dueDate: new Date(item.updated_at).toISOString().split('T')[0],
+          dueDate: item.updated_at ? new Date(item.updated_at).toISOString().split('T')[0] : '',
           status: 'active',
           totalBudget: '$0', // We'd need to calculate this from pay applications
           contractorsCount: 0, // We'd need to calculate this
@@ -257,15 +259,15 @@ export const useApi = () => {
 
   // Get contractors (for PMs and Directors)
   const getContractors = async () => {
-    if (user?.role !== 'pm' && user?.role !== 'director') {
-      throw new Error('Unauthorized');
+    if (!user || (user?.role !== 'pm' && user?.role !== 'director') || !user.organizationId) {
+      return [];
     }
     
     try {
       const { data, error } = await supabase
         .from('users')
         .select('id, first_name, last_name, email')
-        .eq('organization_id', user.organizationId)
+        .eq('organization_id', Number(user.organizationId))
         .eq('role', 'contractor');
         
       if (error) throw error;
@@ -285,15 +287,15 @@ export const useApi = () => {
 
   // Get reviewers (for PMs and Directors)
   const getReviewers = async () => {
-    if (user?.role !== 'pm' && user?.role !== 'director') {
-      throw new Error('Unauthorized');
+    if (!user || (user?.role !== 'pm' && user?.role !== 'director') || !user.organizationId) {
+      return [];
     }
     
     try {
       const { data, error } = await supabase
         .from('users')
         .select('id, first_name, last_name, email')
-        .eq('organization_id', user.organizationId)
+        .eq('organization_id', Number(user.organizationId))
         .eq('role', 'reviewer');
         
       if (error) throw error;
@@ -313,9 +315,9 @@ export const useApi = () => {
 
   // Get pay applications
   const getPayApplications = async () => {
+    if (!user) return [];
+    
     try {
-      let query;
-      
       if (user?.role === 'contractor') {
         // Contractors see applications they submitted
         const { data, error } = await supabase
@@ -327,23 +329,26 @@ export const useApi = () => {
             project_id,
             projects:project_id (name),
             contractor_id,
-            contractors:contractor_id (first_name, last_name, email),
+            users!pay_applications_contractor_id_fkey:contractor_id (first_name, last_name, email),
             current_reviewer_id,
-            reviewers:current_reviewer_id (first_name, last_name, email)
+            reviewers:users!pay_applications_current_reviewer_id_fkey:current_reviewer_id (first_name, last_name, email)
           `)
-          .eq('contractor_id', user.id);
+          .eq('contractor_id', Number(user.id));
           
         if (error) throw error;
         
         return data.map(pa => {
-          const contractorName = pa.contractors ? 
-            `${pa.contractors.first_name || ''} ${pa.contractors.last_name || ''}`.trim() || 
-            pa.contractors.email.split('@')[0] : 
+          const contractorUser = pa.users;
+          const reviewerUser = pa.reviewers;
+          
+          const contractorName = contractorUser ? 
+            `${contractorUser.first_name || ''} ${contractorUser.last_name || ''}`.trim() || 
+            contractorUser.email.split('@')[0] : 
             'Unknown';
             
-          const reviewerName = pa.reviewers ? 
-            `${pa.reviewers.first_name || ''} ${pa.reviewers.last_name || ''}`.trim() || 
-            pa.reviewers.email.split('@')[0] : 
+          const reviewerName = reviewerUser ? 
+            `${reviewerUser.first_name || ''} ${reviewerUser.last_name || ''}`.trim() || 
+            reviewerUser.email.split('@')[0] : 
             null;
             
           return {
@@ -370,17 +375,19 @@ export const useApi = () => {
             project_id,
             projects:project_id (name),
             contractor_id,
-            contractors:contractor_id (first_name, last_name, email),
+            users!pay_applications_contractor_id_fkey:contractor_id (first_name, last_name, email),
             current_reviewer_id
           `)
-          .eq('current_reviewer_id', user.id);
+          .eq('current_reviewer_id', Number(user.id));
           
         if (error) throw error;
         
         return data.map(pa => {
-          const contractorName = pa.contractors ? 
-            `${pa.contractors.first_name || ''} ${pa.contractors.last_name || ''}`.trim() || 
-            pa.contractors.email.split('@')[0] : 
+          const contractorUser = pa.users;
+          
+          const contractorName = contractorUser ? 
+            `${contractorUser.first_name || ''} ${contractorUser.last_name || ''}`.trim() || 
+            contractorUser.email.split('@')[0] : 
             'Unknown';
             
           return {
@@ -398,6 +405,8 @@ export const useApi = () => {
         
       } else {
         // PMs and Directors see all applications in their organization
+        if (!user.organizationId) return [];
+        
         const { data, error } = await supabase
           .from('pay_applications')
           .select(`
@@ -410,27 +419,30 @@ export const useApi = () => {
               organization_id
             ),
             contractor_id,
-            contractors:contractor_id (first_name, last_name, email),
+            users!pay_applications_contractor_id_fkey:contractor_id (first_name, last_name, email),
             current_reviewer_id,
-            reviewers:current_reviewer_id (first_name, last_name, email)
+            reviewers:users!pay_applications_current_reviewer_id_fkey:current_reviewer_id (first_name, last_name, email)
           `);
           
         if (error) throw error;
         
         // Filter for applications related to the organization
         const orgApplications = data.filter(pa => 
-          pa.projects?.organization_id === user?.organizationId
+          pa.projects?.organization_id === Number(user.organizationId)
         );
         
         return orgApplications.map(pa => {
-          const contractorName = pa.contractors ? 
-            `${pa.contractors.first_name || ''} ${pa.contractors.last_name || ''}`.trim() || 
-            pa.contractors.email.split('@')[0] : 
+          const contractorUser = pa.users;
+          const reviewerUser = pa.reviewers;
+          
+          const contractorName = contractorUser ? 
+            `${contractorUser.first_name || ''} ${contractorUser.last_name || ''}`.trim() || 
+            contractorUser.email.split('@')[0] : 
             'Unknown';
             
-          const reviewerName = pa.reviewers ? 
-            `${pa.reviewers.first_name || ''} ${pa.reviewers.last_name || ''}`.trim() || 
-            pa.reviewers.email.split('@')[0] : 
+          const reviewerName = reviewerUser ? 
+            `${reviewerUser.first_name || ''} ${reviewerUser.last_name || ''}`.trim() || 
+            reviewerUser.email.split('@')[0] : 
             null;
             
           return {
@@ -466,11 +478,11 @@ export const useApi = () => {
           project_id,
           projects:project_id (name, organization_id),
           contractor_id,
-          contractors:contractor_id (first_name, last_name, email),
+          users!pay_applications_contractor_id_fkey:contractor_id (first_name, last_name, email),
           current_reviewer_id,
-          reviewers:current_reviewer_id (first_name, last_name, email)
+          reviewers:users!pay_applications_current_reviewer_id_fkey:current_reviewer_id (first_name, last_name, email)
         `)
-        .eq('id', id)
+        .eq('id', Number(id))
         .single();
         
       if (appError) throw appError;
@@ -491,7 +503,7 @@ export const useApi = () => {
           balance_to_finish,
           retainage
         `)
-        .eq('pay_application_id', id);
+        .eq('pay_application_id', Number(id));
         
       if (lineItemsError) throw lineItemsError;
 
@@ -537,14 +549,17 @@ export const useApi = () => {
       );
       
       // Format the contractors and reviewers names
-      const contractorName = application.contractors ? 
-        `${application.contractors.first_name || ''} ${application.contractors.last_name || ''}`.trim() || 
-        application.contractors.email.split('@')[0] : 
+      const contractorUser = application.users;
+      const reviewerUser = application.reviewers;
+      
+      const contractorName = contractorUser ? 
+        `${contractorUser.first_name || ''} ${contractorUser.last_name || ''}`.trim() || 
+        contractorUser.email.split('@')[0] : 
         'Unknown';
         
-      const reviewerName = application.reviewers ? 
-        `${application.reviewers.first_name || ''} ${application.reviewers.last_name || ''}`.trim() || 
-        application.reviewers.email.split('@')[0] : 
+      const reviewerName = reviewerUser ? 
+        `${reviewerUser.first_name || ''} ${reviewerUser.last_name || ''}`.trim() || 
+        reviewerUser.email.split('@')[0] : 
         null;
       
       // Build the application summary
@@ -588,8 +603,8 @@ export const useApi = () => {
   };
 
   // Create a new project (only for PMs and Directors)
-  const createProject = async (projectData: any) => {
-    if (user?.role !== 'pm' && user?.role !== 'director') {
+  const createProject = async (projectData: { name: string }) => {
+    if (!user || (user?.role !== 'pm' && user?.role !== 'director') || !user.organizationId) {
       throw new Error('Unauthorized');
     }
     
@@ -599,7 +614,7 @@ export const useApi = () => {
         const { data: org, error: orgError } = await supabase
           .from('organizations')
           .select('allow_pm_project_creation')
-          .eq('id', user.organizationId)
+          .eq('id', Number(user.organizationId))
           .single();
           
         if (orgError) throw orgError;
@@ -612,12 +627,12 @@ export const useApi = () => {
       // Insert the new project
       const { data, error } = await supabase
         .from('projects')
-        .insert({
+        .insert([{
           name: projectData.name,
-          organization_id: user.organizationId,
-          created_by: user.id,
-          assigned_pm_id: user.role === 'pm' ? user.id : null
-        })
+          organization_id: Number(user.organizationId),
+          created_by: Number(user.id),
+          assigned_pm_id: user.role === 'pm' ? Number(user.id) : null
+        }])
         .select()
         .single();
         
@@ -639,7 +654,7 @@ export const useApi = () => {
 
   // Invite a team member (only for PMs and Directors)
   const inviteTeamMember = async (email: string, role: string) => {
-    if (user?.role !== 'pm' && user?.role !== 'director') {
+    if (!user || (user?.role !== 'pm' && user?.role !== 'director')) {
       throw new Error('Unauthorized');
     }
     

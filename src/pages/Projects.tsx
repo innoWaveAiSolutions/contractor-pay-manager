@@ -8,6 +8,7 @@ import { useApi } from '@/hooks/use-api';
 import NewProjectModal from '@/components/projects/NewProjectModal';
 import { Plus } from 'lucide-react';
 import { CustomButton } from '@/components/ui/custom-button';
+import ProjectsTutorial from '@/components/onboarding/ProjectsTutorial';
 
 const Projects = () => {
   const { user } = useAuth();
@@ -15,6 +16,9 @@ const Projects = () => {
   const [projects, setProjects] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isNewProjectModalOpen, setIsNewProjectModalOpen] = useState(false);
+  
+  // If there are no projects yet and user is a director, show the projects tutorial
+  const [showTutorial, setShowTutorial] = useState(false);
 
   useEffect(() => {
     const fetchProjects = async () => {
@@ -22,6 +26,13 @@ const Projects = () => {
         setIsLoading(true);
         const projectsData = await getProjects();
         setProjects(projectsData);
+        
+        // If director and no projects, maybe show tutorial
+        if (user?.role === 'director' && projectsData.length === 0 && 
+            !localStorage.getItem('projectsTutorialComplete') && 
+            localStorage.getItem('dashboardTutorialComplete') === 'true') {
+          setShowTutorial(true);
+        }
       } catch (error) {
         console.error('Error fetching projects:', error);
       } finally {
@@ -61,11 +72,26 @@ const Projects = () => {
             <div className="flex justify-center py-12">
               <div className="animate-spin h-8 w-8 border-4 border-primary rounded-full border-t-transparent"></div>
             </div>
-          ) : (
+          ) : projects.length > 0 ? (
             <ProjectsList projects={projects} />
+          ) : (
+            <div className="text-center py-12 border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-lg">
+              <h3 className="text-xl font-medium mb-2">No projects yet</h3>
+              <p className="text-muted-foreground mb-6">
+                Get started by creating your first construction project.
+              </p>
+              {(user?.role === 'pm' || user?.role === 'director') && (
+                <CustomButton onClick={() => setIsNewProjectModalOpen(true)}>
+                  <Plus size={16} className="mr-2" /> Create New Project
+                </CustomButton>
+              )}
+            </div>
           )}
         </div>
       </main>
+
+      {/* Show tutorial if needed */}
+      {showTutorial && <ProjectsTutorial />}
 
       <NewProjectModal 
         isOpen={isNewProjectModalOpen} 

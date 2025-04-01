@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
@@ -11,6 +10,8 @@ import ProjectsList from '@/components/dashboard/ProjectsList';
 import { CustomButton } from '@/components/ui/custom-button';
 import NewProjectModal from '@/components/projects/NewProjectModal';
 import InviteTeamModal from '@/components/team/InviteTeamModal';
+import DirectorOnboarding from '@/components/onboarding/DirectorOnboarding';
+import DashboardTutorial from '@/components/onboarding/DashboardTutorial';
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -24,7 +25,17 @@ const Dashboard = () => {
   useEffect(() => {
     if (user) {
       // Get dashboard statistics
-      setStats(getDashboardStatistics());
+      const fetchStats = async () => {
+        try {
+          const statsData = await getDashboardStatistics();
+          setStats(statsData);
+        } catch (error) {
+          console.error('Error fetching stats:', error);
+          setStats([]);
+        }
+      };
+      
+      fetchStats();
       
       // Fetch projects
       const fetchProjects = async () => {
@@ -34,6 +45,7 @@ const Dashboard = () => {
           setProjects(projectsData);
         } catch (error) {
           console.error('Error fetching projects:', error);
+          setProjects([]);
         } finally {
           setIsLoadingProjects(false);
         }
@@ -64,6 +76,9 @@ const Dashboard = () => {
         return <Building size={20} />;
     }
   };
+
+  // Show director onboarding if needed
+  const showDirectorOnboarding = user?.role === 'director' && user.needsOnboarding;
 
   return (
     <div className="min-h-screen bg-background">
@@ -142,6 +157,12 @@ const Dashboard = () => {
           </motion.div>
         </div>
       </main>
+
+      {/* Director Onboarding (shown if needed) */}
+      {showDirectorOnboarding && <DirectorOnboarding />}
+
+      {/* Dashboard Tutorial (shown if not dismissed) */}
+      <DashboardTutorial />
 
       {/* Modals */}
       <NewProjectModal 
