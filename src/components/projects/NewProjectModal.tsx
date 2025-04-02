@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { X, Calendar } from 'lucide-react';
 import { CustomButton } from '@/components/ui/custom-button';
 import { useApi } from '@/hooks/use-api';
-import { toast } from 'sonner';
+import { toast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -11,9 +11,10 @@ import { useAuth } from '@/contexts/AuthContext';
 interface NewProjectModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onSuccess?: () => void;
 }
 
-const NewProjectModal = ({ isOpen, onClose }: NewProjectModalProps) => {
+const NewProjectModal = ({ isOpen, onClose, onSuccess }: NewProjectModalProps) => {
   const { createProject } = useApi();
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -38,25 +39,25 @@ const NewProjectModal = ({ isOpen, onClose }: NewProjectModalProps) => {
     try {
       setIsLoading(true);
       
-      // Create the project in Supabase
-      const { data, error } = await supabase
-        .from('projects')
-        .insert({
-          name: formData.name,
-          organization_id: user?.organization_id,
-          created_by: user?.id
-        })
-        .select()
-        .single();
+      // Use the createProject method from the API hook
+      const result = await createProject(formData);
 
-      if (error) {
-        throw error;
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to create project');
       }
       
-      toast.success('Project created successfully!');
+      toast({
+        title: "Project created successfully!",
+        variant: "default",
+      });
       
       // Close the modal
       onClose();
+      
+      // Call onSuccess callback if provided
+      if (onSuccess) {
+        onSuccess();
+      }
       
       // Mark the projects tutorial as complete
       localStorage.setItem('projectsTutorialComplete', 'true');
@@ -67,9 +68,13 @@ const NewProjectModal = ({ isOpen, onClose }: NewProjectModalProps) => {
         navigate('/organization');
       }
       
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating project:', error);
-      toast.error('Failed to create project. Please try again.');
+      toast({
+        title: "Failed to create project",
+        description: error.message || "Please try again",
+        variant: "destructive",
+      });
     } finally {
       setIsLoading(false);
     }

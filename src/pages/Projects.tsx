@@ -9,7 +9,7 @@ import NewProjectModal from '@/components/projects/NewProjectModal';
 import { Plus } from 'lucide-react';
 import { CustomButton } from '@/components/ui/custom-button';
 import ProjectsTutorial from '@/components/onboarding/ProjectsTutorial';
-import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/hooks/use-toast';
 
 const Projects = () => {
   const { user } = useAuth();
@@ -25,27 +25,23 @@ const Projects = () => {
     try {
       setIsLoading(true);
       
-      // Fetch projects from Supabase
-      const { data: projectsData, error } = await supabase
-        .from('projects')
-        .select('*')
-        .eq('organization_id', user?.organization_id);
-        
-      if (error) {
-        console.error('Error fetching projects:', error);
-        return;
-      }
-      
+      // Use the API hook to fetch projects
+      const projectsData = await getProjects();
       setProjects(projectsData || []);
       
       // If director and no projects, maybe show tutorial
-      if (user?.role === 'director' && projectsData && projectsData.length === 0 && 
+      if (user?.role === 'director' && projectsData.length === 0 && 
           !localStorage.getItem('projectsTutorialComplete') && 
           localStorage.getItem('dashboardTutorialComplete') === 'true') {
         setShowTutorial(true);
       }
     } catch (error) {
       console.error('Error fetching projects:', error);
+      toast({
+        title: "Error loading projects",
+        description: "Could not load your projects. Please try again later.",
+        variant: "destructive",
+      });
     } finally {
       setIsLoading(false);
     }
@@ -113,9 +109,11 @@ const Projects = () => {
       {/* Show tutorial if needed */}
       {showTutorial && <ProjectsTutorial />}
 
+      {/* New Project Modal */}
       <NewProjectModal 
         isOpen={isNewProjectModalOpen} 
-        onClose={() => setIsNewProjectModalOpen(false)} 
+        onClose={() => setIsNewProjectModalOpen(false)}
+        onSuccess={handleProjectCreated}
       />
     </div>
   );
