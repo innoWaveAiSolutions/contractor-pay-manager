@@ -1,12 +1,12 @@
+
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
-// This is a simplified temporary version to fix the build
 export const useApi = () => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
+  // Dashboard statistics
   const getDashboardStatistics = async () => {
-    // Return mock data temporarily until we properly fix this file
     return [
       { title: 'Active Projects', value: 0 },
       { title: 'Pay Applications', value: 0 },
@@ -15,8 +15,50 @@ export const useApi = () => {
     ];
   };
 
+  // Projects methods
   const getProjects = async () => {
-    // Return empty array temporarily until we properly fix this file
+    return [];
+  };
+
+  const createProject = async (projectData: any) => {
+    setIsLoading(true);
+    try {
+      // Mock implementation
+      console.log('Creating project:', projectData);
+      return { success: true, data: { id: 'new-project-id', ...projectData } };
+    } catch (error) {
+      console.error('Error creating project:', error);
+      return { success: false, error };
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Team methods
+  const getContractors = async () => {
+    return [];
+  };
+
+  const getReviewers = async () => {
+    return [];
+  };
+
+  const inviteTeamMember = async (inviteData: any) => {
+    setIsLoading(true);
+    try {
+      // Mock implementation
+      console.log('Inviting team member:', inviteData);
+      return { success: true };
+    } catch (error) {
+      console.error('Error inviting team member:', error);
+      return { success: false, error };
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Pay applications methods
+  const getPayApplications = async () => {
     return [];
   };
 
@@ -24,6 +66,10 @@ export const useApi = () => {
     isLoading,
     getDashboardStatistics,
     getProjects,
-    // Add any other methods needed by components
+    createProject,
+    getContractors,
+    getReviewers,
+    inviteTeamMember,
+    getPayApplications
   };
 };

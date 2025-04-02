@@ -1,13 +1,12 @@
 
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { Eye, EyeOff, ArrowRight } from 'lucide-react';
 import { CustomButton } from '@/components/ui/custom-button';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 
 const LoginForm = () => {
-  const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -15,6 +14,12 @@ const LoginForm = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!email || !password) {
+      toast.error('Please enter both email and password');
+      return;
+    }
+    
     try {
       await login(email, password);
       // Navigation is handled in AuthContext
