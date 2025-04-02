@@ -6,10 +6,23 @@ import { useAuth } from '@/contexts/AuthContext';
 import { CustomButton } from '@/components/ui/custom-button';
 import { User, Lock, Building, Bell, Upload } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 
 const Settings = () => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('profile');
+  
+  // Toggle state for notification preferences
+  const [emailNotifications, setEmailNotifications] = useState(false);
+  const [payAppNotifications, setPayAppNotifications] = useState(true);
+  const [projectNotifications, setProjectNotifications] = useState(true);
+  
+  // Mock backup director options
+  const backupDirectorOptions = [
+    { id: 1, name: "Select a backup director" },
+    { id: 2, name: user?.role === 'director' ? "Jane Doe (Pending)" : "John Smith" },
+    { id: 3, name: "Mark Johnson" },
+  ];
 
   const tabs = [
     { id: 'profile', label: 'Profile', icon: User },
@@ -17,6 +30,10 @@ const Settings = () => {
     { id: 'organization', label: 'Organization', icon: Building },
     { id: 'notifications', label: 'Notifications', icon: Bell },
   ];
+
+  const handleSaveChanges = (section: string) => {
+    toast.success(`${section} settings saved successfully`);
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -114,7 +131,7 @@ const Settings = () => {
                   </div>
 
                   <div className="pt-4">
-                    <CustomButton>Save Changes</CustomButton>
+                    <CustomButton onClick={() => handleSaveChanges("Profile")}>Save Changes</CustomButton>
                   </div>
                 </div>
               )}
@@ -147,7 +164,7 @@ const Settings = () => {
                   </div>
 
                   <div className="pt-4">
-                    <CustomButton>Update Password</CustomButton>
+                    <CustomButton onClick={() => handleSaveChanges("Password")}>Update Password</CustomButton>
                   </div>
                 </div>
               )}
@@ -161,20 +178,20 @@ const Settings = () => {
                         <label className="text-sm font-medium">Organization Name</label>
                         <input
                           type="text"
-                          defaultValue={user?.organizationName}
+                          defaultValue={user?.organizationName || ''}
                           className="w-full px-4 py-2 border border-input rounded-lg bg-background"
                         />
                       </div>
                       <div className="space-y-2">
                         <label className="text-sm font-medium">Backup Director</label>
                         <select className="w-full px-4 py-2 border border-input rounded-lg bg-background">
-                          <option>Select a backup director</option>
-                          <option>John Smith</option>
-                          <option>Jane Doe</option>
+                          {backupDirectorOptions.map((option) => (
+                            <option key={option.id} value={option.id}>{option.name}</option>
+                          ))}
                         </select>
                       </div>
                       <div className="pt-4">
-                        <CustomButton>Save Organization Settings</CustomButton>
+                        <CustomButton onClick={() => handleSaveChanges("Organization")}>Save Organization Settings</CustomButton>
                       </div>
                     </div>
                   ) : user?.role === 'pm' ? (
@@ -204,13 +221,13 @@ const Settings = () => {
                       <div className="space-y-2">
                         <label className="text-sm font-medium">Backup Project Manager</label>
                         <select className="w-full px-4 py-2 border border-input rounded-lg bg-background">
-                          <option>Select a backup PM</option>
-                          <option>John Smith</option>
-                          <option>Jane Doe</option>
+                          {backupDirectorOptions.map((option) => (
+                            <option key={option.id} value={option.id}>{option.name}</option>
+                          ))}
                         </select>
                       </div>
                       <div className="pt-4">
-                        <CustomButton>Save Settings</CustomButton>
+                        <CustomButton onClick={() => handleSaveChanges("Settings")}>Save Settings</CustomButton>
                       </div>
                     </div>
                   ) : (
@@ -230,32 +247,47 @@ const Settings = () => {
                         <h3 className="font-medium">Email Notifications</h3>
                         <p className="text-sm text-muted-foreground">Receive updates via email</p>
                       </div>
-                      <div className="h-6 w-11 bg-muted relative rounded-full cursor-pointer transition-colors">
-                        <div className="absolute left-1 top-1 h-4 w-4 rounded-full bg-foreground transition-transform"></div>
-                      </div>
+                      <button 
+                        onClick={() => setEmailNotifications(!emailNotifications)} 
+                        className={`h-6 w-11 ${emailNotifications ? 'bg-primary' : 'bg-muted'} relative rounded-full cursor-pointer transition-colors`}
+                      >
+                        <div 
+                          className={`absolute ${emailNotifications ? 'right-1' : 'left-1'} top-1 h-4 w-4 rounded-full bg-white transition-transform`}
+                        ></div>
+                      </button>
                     </div>
                     <div className="flex items-center justify-between">
                       <div>
                         <h3 className="font-medium">Pay Application Updates</h3>
                         <p className="text-sm text-muted-foreground">Notifications about pay application status changes</p>
                       </div>
-                      <div className="h-6 w-11 bg-primary relative rounded-full cursor-pointer transition-colors">
-                        <div className="absolute right-1 top-1 h-4 w-4 rounded-full bg-white transition-transform"></div>
-                      </div>
+                      <button 
+                        onClick={() => setPayAppNotifications(!payAppNotifications)} 
+                        className={`h-6 w-11 ${payAppNotifications ? 'bg-primary' : 'bg-muted'} relative rounded-full cursor-pointer transition-colors`}
+                      >
+                        <div 
+                          className={`absolute ${payAppNotifications ? 'right-1' : 'left-1'} top-1 h-4 w-4 rounded-full bg-white transition-transform`}
+                        ></div>
+                      </button>
                     </div>
                     <div className="flex items-center justify-between">
                       <div>
                         <h3 className="font-medium">Project Notifications</h3>
                         <p className="text-sm text-muted-foreground">Updates about project status changes</p>
                       </div>
-                      <div className="h-6 w-11 bg-primary relative rounded-full cursor-pointer transition-colors">
-                        <div className="absolute right-1 top-1 h-4 w-4 rounded-full bg-white transition-transform"></div>
-                      </div>
+                      <button 
+                        onClick={() => setProjectNotifications(!projectNotifications)} 
+                        className={`h-6 w-11 ${projectNotifications ? 'bg-primary' : 'bg-muted'} relative rounded-full cursor-pointer transition-colors`}
+                      >
+                        <div 
+                          className={`absolute ${projectNotifications ? 'right-1' : 'left-1'} top-1 h-4 w-4 rounded-full bg-white transition-transform`}
+                        ></div>
+                      </button>
                     </div>
                   </div>
 
                   <div className="pt-4">
-                    <CustomButton>Save Preferences</CustomButton>
+                    <CustomButton onClick={() => handleSaveChanges("Notification")}>Save Preferences</CustomButton>
                   </div>
                 </div>
               )}

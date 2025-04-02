@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
 import { CustomButton } from '@/components/ui/custom-button';
-import { ChevronRight, X, Users, Settings, Shield } from 'lucide-react';
+import { ChevronRight, ChevronLeft, X, Building, Settings, Users } from 'lucide-react';
 
 const OrganizationTutorial = () => {
   const { user } = useAuth();
@@ -15,18 +15,19 @@ const OrganizationTutorial = () => {
   const tutorialSteps = [
     {
       title: 'Organization Settings',
-      content: 'This is where you manage your organization\'s settings, permissions, and team structure.',
+      content: 'Here you can manage your organization details, project creation permissions, and assign backup directors.',
+      icon: <Building size={24} className="text-primary" />
+    },
+    {
+      title: 'Configure Preferences',
+      content: 'Set up project creation permissions for your Project Managers and other organizational preferences.',
       icon: <Settings size={24} className="text-primary" />
     },
     {
-      title: 'Manage Permissions',
-      content: 'Set permissions for who can create projects, approve pay applications, and more.',
-      icon: <Shield size={24} className="text-primary" />
-    },
-    {
-      title: 'Final Step: Add Team Members',
-      content: 'Now it\'s time to build your team. Invite project managers, reviewers, and contractors.',
-      icon: <Users size={24} className="text-primary" />
+      title: 'Next: Add Team Members',
+      content: 'Now let\'s add your team members to start working on your projects.',
+      icon: <Users size={24} className="text-primary" />,
+      action: { text: 'Go to Team', onClick: () => navigate('/team') }
     }
   ];
 
@@ -41,6 +42,12 @@ const OrganizationTutorial = () => {
     } else {
       dismissTutorial();
       navigate('/team');
+    }
+  };
+
+  const prevStep = () => {
+    if (currentStep > 0) {
+      setCurrentStep(currentStep - 1);
     }
   };
 
@@ -83,10 +90,24 @@ const OrganizationTutorial = () => {
           ))}
         </div>
         
-        <CustomButton onClick={nextStep} size="sm">
-          {currentStep === tutorialSteps.length - 1 ? 'Finish Setup' : 'Next'}
-          <ChevronRight size={14} className="ml-1" />
-        </CustomButton>
+        <div className="flex gap-2">
+          {currentStep > 0 && (
+            <CustomButton onClick={prevStep} size="sm" variant="outline">
+              <ChevronLeft size={14} className="mr-1" /> Previous
+            </CustomButton>
+          )}
+          
+          {tutorialSteps[currentStep].action ? (
+            <CustomButton onClick={tutorialSteps[currentStep].action.onClick} size="sm">
+              {tutorialSteps[currentStep].action.text} <ChevronRight size={14} className="ml-1" />
+            </CustomButton>
+          ) : (
+            <CustomButton onClick={nextStep} size="sm">
+              {currentStep === tutorialSteps.length - 1 ? 'Finish' : 'Next'}
+              <ChevronRight size={14} className="ml-1" />
+            </CustomButton>
+          )}
+        </div>
       </div>
     </motion.div>
   );

@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
 import { CustomButton } from '@/components/ui/custom-button';
-import { ChevronRight, X, Briefcase, Plus, Users } from 'lucide-react';
+import { ChevronRight, ChevronLeft, X, Briefcase, Plus, Users } from 'lucide-react';
 
 const ProjectsTutorial = () => {
   const { user } = useAuth();
@@ -26,7 +26,8 @@ const ProjectsTutorial = () => {
     {
       title: 'Next: Organization Settings',
       content: 'After creating your first project, visit the Organization tab to configure your organization settings.',
-      icon: <Briefcase size={24} className="text-primary" />
+      icon: <Briefcase size={24} className="text-primary" />,
+      action: { text: 'Go to Organization', onClick: () => navigate('/organization') }
     }
   ];
 
@@ -41,6 +42,12 @@ const ProjectsTutorial = () => {
     } else {
       dismissTutorial();
       navigate('/organization');
+    }
+  };
+
+  const prevStep = () => {
+    if (currentStep > 0) {
+      setCurrentStep(currentStep - 1);
     }
   };
 
@@ -83,10 +90,24 @@ const ProjectsTutorial = () => {
           ))}
         </div>
         
-        <CustomButton onClick={nextStep} size="sm">
-          {currentStep === tutorialSteps.length - 1 ? 'Continue' : 'Next'}
-          <ChevronRight size={14} className="ml-1" />
-        </CustomButton>
+        <div className="flex gap-2">
+          {currentStep > 0 && (
+            <CustomButton onClick={prevStep} size="sm" variant="outline">
+              <ChevronLeft size={14} className="mr-1" /> Previous
+            </CustomButton>
+          )}
+          
+          {tutorialSteps[currentStep].action ? (
+            <CustomButton onClick={tutorialSteps[currentStep].action.onClick} size="sm">
+              {tutorialSteps[currentStep].action.text} <ChevronRight size={14} className="ml-1" />
+            </CustomButton>
+          ) : (
+            <CustomButton onClick={nextStep} size="sm">
+              {currentStep === tutorialSteps.length - 1 ? 'Finish' : 'Next'}
+              <ChevronRight size={14} className="ml-1" />
+            </CustomButton>
+          )}
+        </div>
       </div>
     </motion.div>
   );

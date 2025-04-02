@@ -1,91 +1,56 @@
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
 import { CustomButton } from '@/components/ui/custom-button';
-import { ChevronRight, X, Briefcase, Users, Settings, Building } from 'lucide-react';
-
-interface TutorialStep {
-  title: string;
-  content: string;
-  icon: JSX.Element;
-}
+import { ChevronRight, ChevronLeft, X, BarChart2, Briefcase } from 'lucide-react';
 
 const DashboardTutorial = () => {
-  const { user } = useAuth();
+  const { user, markTutorialComplete } = useAuth();
   const navigate = useNavigate();
   const [isVisible, setIsVisible] = useState(true);
   const [currentStep, setCurrentStep] = useState(0);
-  const [tutorial, setTutorial] = useState<TutorialStep[]>([]);
 
-  useEffect(() => {
-    // Show different tutorials based on user role
-    if (user?.role === 'director') {
-      setTutorial([
-        {
-          title: 'Welcome to Your Dashboard',
-          content: 'This is your central hub where you can monitor all activity across your organization, projects, and team members.',
-          icon: <Briefcase size={24} className="text-primary" />
-        },
-        {
-          title: 'Create Your First Project',
-          content: 'Start by creating your first construction project. Click on "New Project" or head to the Projects tab.',
-          icon: <Briefcase size={24} className="text-primary" />
-        },
-        {
-          title: 'Add Your Team',
-          content: 'Invite team members to join your organization. You\'ll need Project Managers, Reviewers, and Contractors.',
-          icon: <Users size={24} className="text-primary" />
-        },
-        {
-          title: 'Configure Your Organization',
-          content: 'Visit the Organization tab to set up preferences and permissions for your team.',
-          icon: <Building size={24} className="text-primary" />
-        }
-      ]);
-    } else {
-      // Default tutorial for other roles
-      setTutorial([
-        {
-          title: 'Welcome to Your Dashboard',
-          content: 'This is your central hub where you can see your assigned projects and tasks.',
-          icon: <Briefcase size={24} className="text-primary" />
-        },
-        {
-          title: 'Explore Your Projects',
-          content: 'Click on the Projects tab to view all projects assigned to you.',
-          icon: <Briefcase size={24} className="text-primary" />
-        },
-        {
-          title: 'Update Your Settings',
-          content: 'Visit the Settings tab to update your profile and preferences.',
-          icon: <Settings size={24} className="text-primary" />
-        }
-      ]);
+  const tutorialSteps = [
+    {
+      title: 'Welcome to Construction Pay',
+      content: 'This is your Dashboard. Here, you can see an overview of your projects, pay applications, and team members.',
+      icon: <BarChart2 size={24} className="text-primary" />,
+      action: { text: 'Next: Create Project', onClick: () => navigate('/projects') }
+    },
+    {
+      title: 'Manage Your Projects',
+      content: 'In the Projects section, you can create and manage all your construction projects.',
+      icon: <Briefcase size={24} className="text-primary" />,
+      action: { text: 'Go to Projects', onClick: () => navigate('/projects') }
     }
-  }, [user?.role]);
+  ];
 
   const dismissTutorial = () => {
     setIsVisible(false);
+    markTutorialComplete();
     localStorage.setItem('dashboardTutorialComplete', 'true');
   };
 
   const nextStep = () => {
-    if (currentStep < tutorial.length - 1) {
+    if (currentStep < tutorialSteps.length - 1) {
       setCurrentStep(currentStep + 1);
     } else {
       dismissTutorial();
-
-      // Navigate to Projects page after completing director tutorial
-      if (user?.role === 'director') {
-        navigate('/projects');
-      }
+      // Navigate to the next step in the onboarding process
+      navigate('/projects');
     }
   };
 
-  // Don't show if tutorial has been completed before or no tutorial data
-  if (!isVisible || !tutorial.length || localStorage.getItem('dashboardTutorialComplete') === 'true') {
+  const prevStep = () => {
+    if (currentStep > 0) {
+      setCurrentStep(currentStep - 1);
+    }
+  };
+
+  // Don't show if tutorial has been completed or user is not a director
+  if (!isVisible || user?.role !== 'director' || user.hasCompletedTutorial || localStorage.getItem('dashboardTutorialComplete') === 'true') {
     return null;
   }
 
@@ -104,16 +69,16 @@ const DashboardTutorial = () => {
       </button>
       
       <div className="flex items-start mb-4 gap-3">
-        {tutorial[currentStep].icon}
+        {tutorialSteps[currentStep].icon}
         <div>
-          <h3 className="font-semibold text-lg">{tutorial[currentStep].title}</h3>
-          <p className="text-muted-foreground text-sm mt-1">{tutorial[currentStep].content}</p>
+          <h3 className="font-semibold text-lg">{tutorialSteps[currentStep].title}</h3>
+          <p className="text-muted-foreground text-sm mt-1">{tutorialSteps[currentStep].content}</p>
         </div>
       </div>
       
       <div className="flex justify-between items-center mt-6">
         <div className="flex gap-1.5">
-          {tutorial.map((_, index) => (
+          {tutorialSteps.map((_, index) => (
             <span 
               key={index} 
               className={`w-2 h-2 rounded-full ${
@@ -123,10 +88,24 @@ const DashboardTutorial = () => {
           ))}
         </div>
         
-        <CustomButton onClick={nextStep} size="sm">
-          {currentStep === tutorial.length - 1 ? 'Finish' : 'Next'}
-          <ChevronRight size={14} className="ml-1" />
-        </CustomButton>
+        <div className="flex gap-2">
+          {currentStep > 0 && (
+            <CustomButton onClick={prevStep} size="sm" variant="outline">
+              <ChevronLeft size={14} className="mr-1" /> Previous
+            </CustomButton>
+          )}
+          
+          {tutorialSteps[currentStep].action ? (
+            <CustomButton onClick={tutorialSteps[currentStep].action.onClick} size="sm">
+              {tutorialSteps[currentStep].action.text} <ChevronRight size={14} className="ml-1" />
+            </CustomButton>
+          ) : (
+            <CustomButton onClick={nextStep} size="sm">
+              {currentStep === tutorialSteps.length - 1 ? 'Finish' : 'Next'}
+              <ChevronRight size={14} className="ml-1" />
+            </CustomButton>
+          )}
+        </div>
       </div>
     </motion.div>
   );

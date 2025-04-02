@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
 import { CustomButton } from '@/components/ui/custom-button';
-import { ChevronRight, X, Users, Mail, CheckCircle } from 'lucide-react';
+import { ChevronRight, ChevronLeft, X, Users, Mail, CheckCircle } from 'lucide-react';
 
 const TeamTutorial = () => {
   const { user } = useAuth();
@@ -40,6 +40,12 @@ const TeamTutorial = () => {
       setCurrentStep(currentStep + 1);
     } else {
       dismissTutorial();
+    }
+  };
+
+  const prevStep = () => {
+    if (currentStep > 0) {
+      setCurrentStep(currentStep - 1);
     }
   };
 
@@ -82,10 +88,18 @@ const TeamTutorial = () => {
           ))}
         </div>
         
-        <CustomButton onClick={nextStep} size="sm">
-          {currentStep === tutorialSteps.length - 1 ? 'Finish' : 'Next'}
-          <ChevronRight size={14} className="ml-1" />
-        </CustomButton>
+        <div className="flex gap-2">
+          {currentStep > 0 && (
+            <CustomButton onClick={prevStep} size="sm" variant="outline">
+              <ChevronLeft size={14} className="mr-1" /> Previous
+            </CustomButton>
+          )}
+          
+          <CustomButton onClick={nextStep} size="sm">
+            {currentStep === tutorialSteps.length - 1 ? 'Finish' : 'Next'}
+            <ChevronRight size={14} className="ml-1" />
+          </CustomButton>
+        </div>
       </div>
     </motion.div>
   );

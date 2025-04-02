@@ -1,10 +1,11 @@
 
 import { useState } from 'react';
-import { X, Mail } from 'lucide-react';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { CustomButton } from '@/components/ui/custom-button';
+import { X, Mail } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 import { useApi } from '@/hooks/use-api';
 import { toast } from 'sonner';
-import { UserRole } from '@/contexts/AuthContext';
 
 interface InviteTeamModalProps {
   isOpen: boolean;
@@ -13,101 +14,120 @@ interface InviteTeamModalProps {
 }
 
 const InviteTeamModal = ({ isOpen, onClose, defaultRole = 'contractor' }: InviteTeamModalProps) => {
-  const { inviteTeamMember } = useApi();
+  const { user } = useAuth();
+  const { inviteTeamMember, isLoading } = useApi();
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [role, setRole] = useState(defaultRole);
-  const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    if (!name || !email) {
+      toast.error('Name and email are required');
+      return;
+    }
+    
     try {
-      setIsLoading(true);
-      await inviteTeamMember(email, role);
-      toast.success(`Invitation sent to ${email}`);
-      onClose();
-      setEmail('');
+      const result = await inviteTeamMember({ name, email, role });
+      
+      if (result.success) {
+        toast.success(`Invitation sent to ${email}`);
+        handleClose();
+      } else {
+        toast.error('Failed to send invitation');
+      }
     } catch (error) {
-      console.error('Error inviting team member:', error);
-      toast.error('Failed to send invitation. Please try again.');
-    } finally {
-      setIsLoading(false);
+      console.error('Error sending invitation:', error);
+      toast.error('An error occurred while sending the invitation');
     }
   };
 
-  if (!isOpen) return null;
+  const handleClose = () => {
+    setName('');
+    setEmail('');
+    setRole(defaultRole);
+    onClose();
+  };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="bg-white dark:bg-gray-900 rounded-xl shadow-elevation max-w-md w-full">
-        <div className="p-6 border-b border-border flex items-center justify-between">
-          <h2 className="text-xl font-semibold">Invite Team Member</h2>
-          <button
-            onClick={onClose}
-            className="h-8 w-8 rounded-md flex items-center justify-center hover:bg-muted transition-colors"
+    <Dialog open={isOpen} onOpenChange={handleClose}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="text-xl font-semibold">Invite Team Member</DialogTitle>
+          <button 
+            className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100"
+            onClick={handleClose}
           >
-            <X size={18} />
+            <X className="h-4 w-4" />
+            <span className="sr-only">Close</span>
           </button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="p-6 space-y-6">
+        </DialogHeader>
+        
+        <form onSubmit={handleSubmit} className="space-y-4 py-4">
           <div className="space-y-2">
-            <label htmlFor="email" className="text-sm font-medium">Email Address *</label>
-            <div className="relative">
-              <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                placeholder="name@example.com"
-                className="w-full pl-10 pr-4 py-2 border border-input rounded-lg bg-background input-focus"
-              />
-            </div>
+            <label htmlFor="name" className="text-sm font-medium">
+              Full Name
+            </label>
+            <input
+              id="name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="w-full px-4 py-2 border border-input rounded-lg bg-background"
+              placeholder="John Doe"
+            />
           </div>
-
+          
           <div className="space-y-2">
-            <label htmlFor="role" className="text-sm font-medium">Role *</label>
+            <label htmlFor="email" className="text-sm font-medium">
+              Email Address
+            </label>
+            <input
+              id="email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full px-4 py-2 border border-input rounded-lg bg-background"
+              placeholder="john@example.com"
+            />
+          </div>
+          
+          <div className="space-y-2">
+            <label htmlFor="role" className="text-sm font-medium">
+              Role
+            </label>
             <select
               id="role"
               value={role}
               onChange={(e) => setRole(e.target.value)}
-              className="w-full px-4 py-2 border border-input rounded-lg bg-background input-focus"
+              className="w-full px-4 py-2 border border-input rounded-lg bg-background"
             >
               <option value="contractor">Contractor</option>
               <option value="reviewer">Reviewer</option>
-              <option value="pm">Project Manager</option>
+              {user?.role === 'director' && (
+                <option value="pm">Project Manager</option>
+              )}
             </select>
           </div>
 
-          <div className="pt-4 flex justify-end gap-2">
+          <DialogFooter className="pt-4">
             <CustomButton
               type="button"
               variant="outline"
-              onClick={onClose}
-              disabled={isLoading}
+              onClick={handleClose}
             >
               Cancel
             </CustomButton>
             <CustomButton
               type="submit"
-              disabled={isLoading}
+              disabled={isLoading || !name || !email}
             >
-              {isLoading ? (
-                <span className="flex items-center">
-                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  Sending...
-                </span>
-              ) : 'Send Invitation'}
+              <Mail className="mr-2 h-4 w-4" /> Send Invitation
             </CustomButton>
-          </div>
+          </DialogFooter>
         </form>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 };
 

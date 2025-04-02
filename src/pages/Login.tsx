@@ -5,10 +5,9 @@ import LoginForm from '@/components/auth/LoginForm';
 import { useAuth } from '@/contexts/AuthContext';
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import DirectorOnboarding from '@/components/onboarding/DirectorOnboarding';
 
 const Login = () => {
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
 
   // Redirect if already authenticated
@@ -44,11 +43,6 @@ const Login = () => {
           ← Back to Home
         </Link>
       </div>
-
-      {/* Show Director Onboarding if user is director and needs onboarding */}
-      {user && user.role === 'director' && user.needsOnboarding && (
-        <DirectorOnboarding />
-      )}
     </div>
   );
 };

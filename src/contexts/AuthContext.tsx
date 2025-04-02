@@ -23,6 +23,7 @@ export interface User {
   organizationId?: string | number;
   organizationName?: string;
   needsOnboarding?: boolean;
+  hasCompletedTutorial?: boolean;
 }
 
 // Define authentication context interface
@@ -34,6 +35,7 @@ interface AuthContextType {
   register: (name: string, email: string, password: string, role: UserRole, organizationName?: string) => Promise<void>;
   logout: () => Promise<void>;
   completeDirectorOnboarding: (backupDirectorEmail: string, backupDirectorName: string) => Promise<void>;
+  markTutorialComplete: () => void;
 }
 
 // Create the authentication context
@@ -92,13 +94,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // Handle redirects after authentication status changes
   useEffect(() => {
     if (user && location.pathname === '/login') {
-      if (user.role === 'director' && user.needsOnboarding) {
-        navigate('/dashboard');
-      } else {
-        navigate('/dashboard');
-      }
+      navigate('/dashboard');
     }
   }, [user, location.pathname, navigate]);
+
+  // Check if this is the first time the user is logging in
+  const isFirstLogin = (supabaseUser: SupabaseUser): boolean => {
+    // Check if the last_sign_in_at is close to the created_at (within 5 minutes)
+    const createdAt = new Date(supabaseUser.created_at || '').getTime();
+    const lastSignIn = new Date(supabaseUser.last_sign_in_at || '').getTime();
+    
+    // If the difference is less than 5 minutes, consider it a first login
+    return Math.abs(lastSignIn - createdAt) < 5 * 60 * 1000;
+  };
 
   // Separate function to fetch user profile data
   const fetchUserProfile = async (supabaseUser: SupabaseUser) => {
@@ -110,6 +118,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const firstName = supabaseUser.user_metadata?.first_name || '';
       const lastName = supabaseUser.user_metadata?.last_name || '';
       const organizationName = supabaseUser.user_metadata?.organization_name || '';
+      const firstTimeLogin = isFirstLogin(supabaseUser);
+      
+      // Get tutorial completion status from localStorage
+      const tutorialKey = `${email}_tutorial_complete`;
+      const hasCompletedTutorial = localStorage.getItem(tutorialKey) === 'true';
+      
+      // Get onboarding status from localStorage
+      const onboardingKey = `${email}_onboarding_complete`;
+      const hasCompletedOnboarding = localStorage.getItem(onboardingKey) === 'true';
       
       // Construct a user object from auth data only
       const userFromAuth = {
@@ -120,8 +137,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         // These fields would normally come from the database
         organizationId: undefined,
         organizationName,
-        // Director always needs onboarding for now, until we can check the DB
-        needsOnboarding: role === 'director'
+        // Director needs onboarding only on first login and if it hasn't been completed
+        needsOnboarding: role === 'director' && firstTimeLogin && !hasCompletedOnboarding,
+        hasCompletedTutorial
       };
       
       // Try to get additional user data from the database
@@ -148,7 +166,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           // Check if a director needs onboarding (no organization or no backup director set)
           let needsOnboarding = false;
           
-          if (data.role === 'director') {
+          if (data.role === 'director' && firstTimeLogin && !hasCompletedOnboarding) {
             // Check if the organization has a backup_director_id set
             if (data.organization_id) {
               const { data: orgData, error: orgError } = await supabase
@@ -172,7 +190,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             role: data.role as UserRole || role,
             organizationId: data.organization_id,
             organizationName: data.organizations?.name || organizationName,
-            needsOnboarding
+            needsOnboarding,
+            hasCompletedTutorial
           });
         } else {
           // No user found in database, use auth data
@@ -222,7 +241,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
       
       // Sign up the user with Supabase Auth
-      const { error } = await supabase.auth.signUp({
+      const { error, data } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -237,6 +256,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       
       if (error) {
         throw error;
+      }
+
+      // If the user is a director and they provided an organization name, create it
+      if (role === 'director' && organizationName && data.user) {
+        try {
+          // Create organization record using edge function or direct insert
+          // This is where we would create the organization for the director
+          console.log('Would create organization:', organizationName, 'for user:', data.user.id);
+          
+          // In a real implementation, we would use an edge function or RLS policy
+        } catch (orgError) {
+          console.error('Failed to create organization:', orgError);
+          // Continue even if org creation fails, as user is still registered
+        }
       }
 
       toast.success('Registration successful! Please check your email to verify your account.');
@@ -261,6 +294,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  // Mark tutorial as completed
+  const markTutorialComplete = () => {
+    if (user) {
+      const tutorialKey = `${user.email}_tutorial_complete`;
+      localStorage.setItem(tutorialKey, 'true');
+      setUser(prev => prev ? {...prev, hasCompletedTutorial: true} : null);
+    }
+  };
+
   // Complete director onboarding by setting backup director
   const completeDirectorOnboarding = async (backupDirectorEmail: string, backupDirectorName: string) => {
     if (!user || user.role !== 'director') {
@@ -271,8 +313,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       setIsLoading(true);
       
-      // For now we'll just update the local state since we can't access the database
-      // In a real app, we would create the organization and set the backup director
+      // In a real implementation, we would use an edge function to send an email
+      // and update the organization with the pending backup director info
+      
+      console.log('Sending invitation to backup director:', backupDirectorEmail, backupDirectorName);
+      
+      // Mark onboarding as completed in localStorage
+      const onboardingKey = `${user.email}_onboarding_complete`;
+      localStorage.setItem(onboardingKey, 'true');
+      
+      // Update user state
       setUser(prev => prev ? {...prev, needsOnboarding: false} : null);
       
       toast.success(`Invitation sent to ${backupDirectorEmail}`);
@@ -294,7 +344,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         login,
         register,
         logout,
-        completeDirectorOnboarding
+        completeDirectorOnboarding,
+        markTutorialComplete
       }}
     >
       {children}

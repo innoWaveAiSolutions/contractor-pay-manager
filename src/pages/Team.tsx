@@ -14,6 +14,7 @@ const Team = () => {
   const { getContractors, getReviewers } = useApi();
   const [contractors, setContractors] = useState<any[]>([]);
   const [reviewers, setReviewers] = useState<any[]>([]);
+  const [projectManagers, setProjectManagers] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const [selectedRole, setSelectedRole] = useState('contractor');
@@ -29,13 +30,20 @@ const Team = () => {
         setIsLoading(true);
         
         if (user?.role === 'pm' || user?.role === 'director') {
-          const [contractorsData, reviewersData] = await Promise.all([
-            getContractors(),
-            getReviewers()
-          ]);
+          // For this demo, we're using mock data until the backend is ready
+          const contractorsData = await getContractors();
+          const reviewersData = await getReviewers();
           
           setContractors(contractorsData || []);
           setReviewers(reviewersData || []);
+          
+          // Add mock project managers for directors
+          if (user?.role === 'director') {
+            setProjectManagers([
+              { id: 1, name: 'Jane Smith', email: 'jane@example.com', projectsManaged: 2 },
+              { id: 2, name: 'Mark Johnson', email: 'mark@example.com', projectsManaged: 1 },
+            ]);
+          }
         }
       } catch (error) {
         console.error('Error fetching team members:', error);
@@ -74,7 +82,7 @@ const Team = () => {
               </div>
 
               {(user?.role === 'pm' || user?.role === 'director') && (
-                <div className="flex gap-2">
+                <div className="flex gap-2 flex-wrap">
                   <CustomButton onClick={() => openInviteModal('contractor')}>
                     <Plus size={16} className="mr-2" /> Add Contractor
                   </CustomButton>
@@ -97,6 +105,44 @@ const Team = () => {
             </div>
           ) : (
             <>
+              {/* Project Managers section (for directors only) */}
+              {user?.role === 'director' && (
+                <div className="mb-10">
+                  <h2 className="text-xl font-semibold mb-4">Project Managers</h2>
+                  {projectManagers.length > 0 ? (
+                    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden">
+                      <div className="overflow-x-auto">
+                        <table className="w-full">
+                          <thead>
+                            <tr className="bg-gray-50 dark:bg-gray-900/50 text-left">
+                              <th className="px-6 py-3 text-sm font-medium">Name</th>
+                              <th className="px-6 py-3 text-sm font-medium">Email</th>
+                              <th className="px-6 py-3 text-sm font-medium">Projects Managed</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                            {projectManagers.map((pm) => (
+                              <tr key={pm.id} className="hover:bg-gray-50 dark:hover:bg-gray-900/20">
+                                <td className="px-6 py-4 whitespace-nowrap">{pm.name}</td>
+                                <td className="px-6 py-4 whitespace-nowrap">{pm.email}</td>
+                                <td className="px-6 py-4 whitespace-nowrap">{pm.projectsManaged}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-lg">
+                      <p className="text-muted-foreground mb-4">No project managers added yet</p>
+                      <CustomButton onClick={() => openInviteModal('pm')} variant="outline">
+                        <Plus size={16} className="mr-2" /> Add Project Manager
+                      </CustomButton>
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Contractors section */}
               <div className="mb-10">
                 <h2 className="text-xl font-semibold mb-4">Contractors</h2>

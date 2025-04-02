@@ -4,15 +4,30 @@ import { motion } from 'framer-motion';
 import Sidebar from '@/components/layout/Sidebar';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { CustomButton } from '@/components/ui/custom-button';
+import { Plus } from 'lucide-react';
 import OrganizationTutorial from '@/components/onboarding/OrganizationTutorial';
+import CreateOrganizationModal from '@/components/organization/CreateOrganizationModal';
 
 const Organization = () => {
   const { user } = useAuth();
   const [organization, setOrganization] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   useEffect(() => {
     const fetchOrganizationDetails = async () => {
+      if (!user?.organizationId && user?.organizationName) {
+        // If we have an organization name from auth metadata but no ID yet
+        setOrganization({
+          name: user.organizationName,
+          allow_pm_project_creation: true,
+          subscription_plan: 'Free'
+        });
+        setIsLoading(false);
+        return;
+      }
+      
       if (!user?.organizationId) {
         setIsLoading(false);
         return;
@@ -39,12 +54,16 @@ const Organization = () => {
     };
 
     fetchOrganizationDetails();
-  }, [user?.organizationId]);
+  }, [user?.organizationId, user?.organizationName]);
 
   // Show tutorial if needed
   const showTutorial = user?.role === 'director' && 
     !localStorage.getItem('organizationTutorialComplete') && 
     localStorage.getItem('projectsTutorialComplete') === 'true';
+
+  const handleCreateOrganization = () => {
+    setIsCreateModalOpen(true);
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -94,7 +113,11 @@ const Organization = () => {
                       <p className="text-sm text-muted-foreground">Project managers can create new projects</p>
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer">
-                      <input type="checkbox" className="sr-only peer" defaultChecked={organization.allow_pm_project_creation} />
+                      <input 
+                        type="checkbox" 
+                        className="sr-only peer" 
+                        defaultChecked={organization.allow_pm_project_creation} 
+                      />
                       <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-primary"></div>
                     </label>
                   </div>
@@ -114,9 +137,15 @@ const Organization = () => {
               </div>
             </div>
           ) : (
-            <div className="text-center py-12 border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-lg">
+            <div className="flex flex-col items-center justify-center py-12 border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-lg">
               <h3 className="text-xl font-medium mb-2">No organization found</h3>
-              <p className="text-muted-foreground">You're not currently assigned to an organization.</p>
+              <p className="text-muted-foreground mb-6">You're not currently assigned to an organization.</p>
+              
+              {user?.role === 'director' && (
+                <CustomButton onClick={handleCreateOrganization}>
+                  <Plus size={16} className="mr-2" /> Create Organization
+                </CustomButton>
+              )}
             </div>
           )}
         </div>
@@ -124,6 +153,13 @@ const Organization = () => {
 
       {/* Show tutorial if needed */}
       {showTutorial && <OrganizationTutorial />}
+
+      {/* Create Organization Modal */}
+      <CreateOrganizationModal 
+        isOpen={isCreateModalOpen} 
+        onClose={() => setIsCreateModalOpen(false)}
+        defaultName={user?.organizationName}
+      />
     </div>
   );
 };
