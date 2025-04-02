@@ -9,6 +9,7 @@ import NewProjectModal from '@/components/projects/NewProjectModal';
 import { Plus } from 'lucide-react';
 import { CustomButton } from '@/components/ui/custom-button';
 import ProjectsTutorial from '@/components/onboarding/ProjectsTutorial';
+import { supabase } from '@/integrations/supabase/client';
 
 const Projects = () => {
   const { user } = useAuth();
@@ -20,28 +21,47 @@ const Projects = () => {
   // If there are no projects yet and user is a director, show the projects tutorial
   const [showTutorial, setShowTutorial] = useState(false);
 
-  useEffect(() => {
-    const fetchProjects = async () => {
-      try {
-        setIsLoading(true);
-        const projectsData = await getProjects();
-        setProjects(projectsData);
+  const fetchProjects = async () => {
+    try {
+      setIsLoading(true);
+      
+      // Fetch projects from Supabase
+      const { data: projectsData, error } = await supabase
+        .from('projects')
+        .select('*')
+        .eq('organization_id', user?.organization_id);
         
-        // If director and no projects, maybe show tutorial
-        if (user?.role === 'director' && projectsData.length === 0 && 
-            !localStorage.getItem('projectsTutorialComplete') && 
-            localStorage.getItem('dashboardTutorialComplete') === 'true') {
-          setShowTutorial(true);
-        }
-      } catch (error) {
+      if (error) {
         console.error('Error fetching projects:', error);
-      } finally {
-        setIsLoading(false);
+        return;
       }
-    };
+      
+      setProjects(projectsData || []);
+      
+      // If director and no projects, maybe show tutorial
+      if (user?.role === 'director' && projectsData && projectsData.length === 0 && 
+          !localStorage.getItem('projectsTutorialComplete') && 
+          localStorage.getItem('dashboardTutorialComplete') === 'true') {
+        setShowTutorial(true);
+      }
+    } catch (error) {
+      console.error('Error fetching projects:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
+  useEffect(() => {
+    if (user?.organization_id) {
+      fetchProjects();
+    }
+  }, [user]);
+  
+  // Handle project creation success
+  const handleProjectCreated = () => {
+    setIsNewProjectModalOpen(false);
     fetchProjects();
-  }, []);
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -61,7 +81,7 @@ const Projects = () => {
               </div>
 
               {(user?.role === 'pm' || user?.role === 'director') && (
-                <CustomButton onClick={() => setIsNewProjectModalOpen(true)}>
+                <CustomButton onClick={() => setIsNewProjectModalOpen(true)} id="new-project-btn">
                   <Plus size={16} className="mr-2" /> New Project
                 </CustomButton>
               )}

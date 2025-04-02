@@ -15,8 +15,13 @@ const ProjectsTutorial = () => {
   const tutorialSteps = [
     {
       title: 'Create Your First Project',
-      content: 'Click the "New Project" button to create your first project. Give it a name and other details to get started.',
-      icon: <Plus size={24} className="text-primary" />
+      content: 'Click the "New Project" button above to create your first project. Give it a name, budget and other details to get started.',
+      icon: <Plus size={24} className="text-primary" />,
+      action: {
+        text: 'Create New Project',
+        onClick: () => document.querySelector('button:has(.mr-2 svg[data-lucide="plus"])') && 
+          (document.querySelector('button:has(.mr-2 svg[data-lucide="plus"])') as HTMLButtonElement).click()
+      }
     },
     {
       title: 'Assign Team Members',
@@ -25,9 +30,15 @@ const ProjectsTutorial = () => {
     },
     {
       title: 'Next: Organization Settings',
-      content: 'After creating your first project, visit the Organization tab to configure your organization settings.',
+      content: 'After creating your first project, we\'ll take you to the Organization tab to configure your organization settings.',
       icon: <Briefcase size={24} className="text-primary" />,
-      action: { text: 'Go to Organization', onClick: () => navigate('/organization') }
+      action: {
+        text: 'Go to Organization',
+        onClick: () => {
+          localStorage.setItem('projectsTutorialComplete', 'true');
+          navigate('/organization');
+        }
+      }
     }
   ];
 

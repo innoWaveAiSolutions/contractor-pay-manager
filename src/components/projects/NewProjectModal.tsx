@@ -4,6 +4,9 @@ import { X, Calendar } from 'lucide-react';
 import { CustomButton } from '@/components/ui/custom-button';
 import { useApi } from '@/hooks/use-api';
 import { toast } from 'sonner';
+import { useNavigate } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface NewProjectModalProps {
   isOpen: boolean;
@@ -12,6 +15,8 @@ interface NewProjectModalProps {
 
 const NewProjectModal = ({ isOpen, onClose }: NewProjectModalProps) => {
   const { createProject } = useApi();
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     name: '',
     client: '',
@@ -32,12 +37,36 @@ const NewProjectModal = ({ isOpen, onClose }: NewProjectModalProps) => {
     
     try {
       setIsLoading(true);
-      await createProject(formData);
+      
+      // Create the project in Supabase
+      const { data, error } = await supabase
+        .from('projects')
+        .insert({
+          name: formData.name,
+          organization_id: user?.organization_id,
+          created_by: user?.id
+        })
+        .select()
+        .single();
+
+      if (error) {
+        throw error;
+      }
+      
       toast.success('Project created successfully!');
+      
+      // Close the modal
       onClose();
       
-      // In a real app, we'd probably want to refresh the projects list
-      // or navigate to the new project details page
+      // Mark the projects tutorial as complete
+      localStorage.setItem('projectsTutorialComplete', 'true');
+      
+      // Trigger the Organization tutorial if this is part of onboarding flow
+      if (!localStorage.getItem('organizationTutorialComplete')) {
+        // Navigate to the organization page to continue the tutorial flow
+        navigate('/organization');
+      }
+      
     } catch (error) {
       console.error('Error creating project:', error);
       toast.error('Failed to create project. Please try again.');

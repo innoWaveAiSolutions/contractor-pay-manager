@@ -27,7 +27,13 @@ const OrganizationTutorial = () => {
       title: 'Next: Add Team Members',
       content: 'Now let\'s add your team members to start working on your projects.',
       icon: <Users size={24} className="text-primary" />,
-      action: { text: 'Go to Team', onClick: () => navigate('/team') }
+      action: { 
+        text: 'Go to Team', 
+        onClick: () => {
+          localStorage.setItem('organizationTutorialComplete', 'true');
+          navigate('/team');
+        }
+      }
     }
   ];
 

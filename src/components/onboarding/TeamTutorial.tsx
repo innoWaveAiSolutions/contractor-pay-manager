@@ -14,7 +14,12 @@ const TeamTutorial = () => {
     {
       title: 'Build Your Team',
       content: 'Invite team members by clicking the "Invite Team Member" button. You\'ll need project managers, reviewers, and contractors.',
-      icon: <Users size={24} className="text-primary" />
+      icon: <Users size={24} className="text-primary" />,
+      action: {
+        text: 'Invite Team Member',
+        onClick: () => document.querySelector('button:has(span:contains("Invite"))') && 
+          (document.querySelector('button:has(span:contains("Invite"))') as HTMLButtonElement).click()
+      }
     },
     {
       title: 'Send Invitations',
@@ -50,7 +55,13 @@ const TeamTutorial = () => {
   };
 
   // Don't show if tutorial has been completed or user is not a director
-  if (!isVisible || user?.role !== 'director' || localStorage.getItem('teamTutorialComplete') === 'true') {
+  // Also only show if the previous tutorial was completed
+  if (
+    !isVisible || 
+    user?.role !== 'director' || 
+    localStorage.getItem('teamTutorialComplete') === 'true' ||
+    !localStorage.getItem('organizationTutorialComplete')
+  ) {
     return null;
   }
 
@@ -95,10 +106,16 @@ const TeamTutorial = () => {
             </CustomButton>
           )}
           
-          <CustomButton onClick={nextStep} size="sm">
-            {currentStep === tutorialSteps.length - 1 ? 'Finish' : 'Next'}
-            <ChevronRight size={14} className="ml-1" />
-          </CustomButton>
+          {tutorialSteps[currentStep].action ? (
+            <CustomButton onClick={tutorialSteps[currentStep].action.onClick} size="sm">
+              {tutorialSteps[currentStep].action.text} <ChevronRight size={14} className="ml-1" />
+            </CustomButton>
+          ) : (
+            <CustomButton onClick={nextStep} size="sm">
+              {currentStep === tutorialSteps.length - 1 ? 'Finish' : 'Next'}
+              <ChevronRight size={14} className="ml-1" />
+            </CustomButton>
+          )}
         </div>
       </div>
     </motion.div>
