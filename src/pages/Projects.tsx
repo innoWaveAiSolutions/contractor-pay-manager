@@ -17,6 +17,7 @@ const Projects = () => {
   const [projects, setProjects] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isNewProjectModalOpen, setIsNewProjectModalOpen] = useState(false);
+  const [loadingTimedOut, setLoadingTimedOut] = useState(false);
   
   // If there are no projects yet and user is a director, show the projects tutorial
   const [showTutorial, setShowTutorial] = useState(false);
@@ -24,9 +25,19 @@ const Projects = () => {
   const fetchProjects = async () => {
     try {
       setIsLoading(true);
+      setLoadingTimedOut(false);
+      
+      // Add timeout to prevent infinite loading state
+      const timeoutId = setTimeout(() => {
+        setLoadingTimedOut(true);
+      }, 10000); // 10 seconds timeout
       
       // Use the API hook to fetch projects
       const projectsData = await getProjects();
+      
+      // Clear timeout as we got a response
+      clearTimeout(timeoutId);
+      
       setProjects(projectsData || []);
       
       // If director and no projects, maybe show tutorial
@@ -42,13 +53,14 @@ const Projects = () => {
         description: "Could not load your projects. Please try again later.",
         variant: "destructive",
       });
+      setLoadingTimedOut(true);
     } finally {
       setIsLoading(false);
     }
   };
 
   useEffect(() => {
-    if (user?.organization_id) {
+    if (user) {
       fetchProjects();
     }
   }, [user]);
@@ -84,7 +96,7 @@ const Projects = () => {
             </div>
           </motion.div>
 
-          {isLoading ? (
+          {isLoading && !loadingTimedOut ? (
             <div className="flex justify-center py-12">
               <div className="animate-spin h-8 w-8 border-4 border-primary rounded-full border-t-transparent"></div>
             </div>
@@ -94,7 +106,9 @@ const Projects = () => {
             <div className="text-center py-12 border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-lg">
               <h3 className="text-xl font-medium mb-2">No projects yet</h3>
               <p className="text-muted-foreground mb-6">
-                Get started by creating your first construction project.
+                {loadingTimedOut 
+                  ? "We couldn't load your projects. There might be a connection issue." 
+                  : "Get started by creating your first construction project."}
               </p>
               {(user?.role === 'pm' || user?.role === 'director') && (
                 <CustomButton onClick={() => setIsNewProjectModalOpen(true)}>
