@@ -18,6 +18,7 @@ const Projects = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isNewProjectModalOpen, setIsNewProjectModalOpen] = useState(false);
   const [loadingTimedOut, setLoadingTimedOut] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   
   // If there are no projects yet and user is a director, show the projects tutorial
   const [showTutorial, setShowTutorial] = useState(false);
@@ -26,11 +27,12 @@ const Projects = () => {
     try {
       setIsLoading(true);
       setLoadingTimedOut(false);
+      setError(null);
       
       // Add timeout to prevent infinite loading state
       const timeoutId = setTimeout(() => {
         setLoadingTimedOut(true);
-      }, 10000); // 10 seconds timeout
+      }, 5000); // 5 second timeout
       
       // Use the API hook to fetch projects
       const projectsData = await getProjects();
@@ -46,8 +48,9 @@ const Projects = () => {
           localStorage.getItem('dashboardTutorialComplete') === 'true') {
         setShowTutorial(true);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching projects:', error);
+      setError('Could not load projects due to a permission or connection issue.');
       toast({
         title: "Error loading projects",
         description: "Could not load your projects. Please try again later.",
@@ -99,6 +102,16 @@ const Projects = () => {
           {isLoading && !loadingTimedOut ? (
             <div className="flex justify-center py-12">
               <div className="animate-spin h-8 w-8 border-4 border-primary rounded-full border-t-transparent"></div>
+            </div>
+          ) : error ? (
+            <div className="text-center py-12 border-2 border-dashed border-red-200 dark:border-red-800 rounded-lg">
+              <h3 className="text-xl font-medium mb-2 text-red-600 dark:text-red-400">Error Loading Projects</h3>
+              <p className="text-muted-foreground mb-6">
+                {error}
+              </p>
+              <CustomButton onClick={fetchProjects} variant="outline">
+                Retry
+              </CustomButton>
             </div>
           ) : projects.length > 0 ? (
             <ProjectsList projects={projects} />

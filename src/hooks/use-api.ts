@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
@@ -50,7 +49,7 @@ export const useApi = () => {
     try {
       setIsLoading(true);
       
-      // Try to get projects from the database
+      // Get projects directly, without trying to filter by organization
       const { data, error } = await supabase
         .from('projects')
         .select('*')
@@ -58,12 +57,11 @@ export const useApi = () => {
       
       if (error) {
         console.error('Error fetching projects:', error);
-        // Return empty array after a delay to avoid infinite loading state
-        return [];
+        throw error;
       }
       
       // Transform to match the expected format
-      return data.map(project => ({
+      return (data || []).map(project => ({
         id: project.id,
         name: project.name || 'Untitled Project',
         client: 'Client Name', // Add default or get from additional column
@@ -90,27 +88,23 @@ export const useApi = () => {
         throw new Error('User not authenticated');
       }
       
-      // Since we can't access the users table directly due to RLS policies,
-      // we'll use the auth user's metadata instead
-      const user = userData.user;
-      const userMeta = user.user_metadata || {};
+      // Use the user's ID directly from auth, not from the users table
+      const userId = userData.user.id;
       
-      // Create a project directly with organization info from user metadata
+      // Create the project without trying to look up organization_id
       const { data, error } = await supabase
         .from('projects')
         .insert({
           name: projectData.name,
-          // Use organization info from user metadata or another reliable source
-          organization_id: null, // We'll update this if you have a way to get org_id
-          created_by: user.id
-          // Add additional fields from projectData as needed
+          created_by: userId
+          // We're not setting organization_id since we can't access it
         })
         .select()
         .single();
 
       if (error) {
         console.error('Error creating project:', error);
-        return { success: false, error: error.message };
+        throw error;
       }
 
       return { 
