@@ -10,7 +10,7 @@ const LoginForm = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const { login, isLoading } = useAuth();
+  const { signIn, isLoading } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -21,11 +21,15 @@ const LoginForm = () => {
     }
     
     try {
-      await login(email, password);
+      const { error } = await signIn(email, password);
+      if (error) {
+        console.error('Login error:', error);
+        toast.error(error.message || 'Failed to sign in');
+      }
       // Navigation is handled in AuthContext
     } catch (error) {
       console.error('Login failed:', error);
-      // Error is already handled in the login function
+      toast.error('An unexpected error occurred');
     }
   };
 

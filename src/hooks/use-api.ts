@@ -93,12 +93,12 @@ export const useApi = () => {
       const userId = userData.user.id;
       
       // Create the project with just the necessary fields
-      // IMPORTANT: Make sure created_by is a UUID (string) matching auth.uid()
+      // Important: created_by must be a string (UUID) to match auth.uid()
       const { data, error } = await supabase
         .from('projects')
         .insert({
           name: projectData.name,
-          created_by: userId // This is correct - auth.uid() is a UUID (string)
+          created_by: userId // This should be a string (UUID)
         })
         .select();
       
@@ -118,7 +118,7 @@ export const useApi = () => {
           ...projectData
         }
       };
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error creating project:', error);
       return { success: false, error: error.message || 'Failed to create project' };
     } finally {
