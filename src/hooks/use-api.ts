@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
@@ -49,7 +50,7 @@ export const useApi = () => {
     try {
       setIsLoading(true);
       
-      // Get projects directly, without trying to filter by organization
+      // Get projects directly, without trying to join with the users table
       const { data, error } = await supabase
         .from('projects')
         .select('*')
@@ -73,7 +74,7 @@ export const useApi = () => {
       }));
     } catch (error) {
       console.error('Error in getProjects:', error);
-      return [];
+      throw error;
     } finally {
       setIsLoading(false);
     }
@@ -82,35 +83,37 @@ export const useApi = () => {
   const createProject = async (projectData: any) => {
     setIsLoading(true);
     try {
-      const { data: userData } = await supabase.auth.getUser();
+      const { data: userData, error: authError } = await supabase.auth.getUser();
       
-      if (!userData || !userData.user) {
+      if (authError || !userData || !userData.user) {
         throw new Error('User not authenticated');
       }
       
-      // Use the user's ID directly from auth, not from the users table
+      // Use the user's ID directly from auth
       const userId = userData.user.id;
       
-      // Create the project without trying to look up organization_id
+      // Create the project without trying to access the users table
       const { data, error } = await supabase
         .from('projects')
         .insert({
           name: projectData.name,
-          created_by: userId
-          // We're not setting organization_id since we can't access it
+          created_by: userId // Use the auth user ID directly
         })
-        .select()
-        .single();
-
+        .select();
+      
       if (error) {
         console.error('Error creating project:', error);
         throw error;
       }
 
+      if (!data || data.length === 0) {
+        throw new Error('No project data returned after creation');
+      }
+
       return { 
         success: true, 
         data: {
-          id: data.id,
+          id: data[0].id,
           ...projectData
         }
       };

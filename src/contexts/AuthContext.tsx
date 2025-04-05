@@ -111,13 +111,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // Separate function to fetch user profile data
   const fetchUserProfile = async (supabaseUser: SupabaseUser) => {
     try {
-      // Extract role and other info directly from the auth metadata as a fallback
-      // This is critical for handling the permission issue with the users table
+      // Skip trying to query the users table and use auth metadata instead
+      // This avoids the permission denied errors
       const email = supabaseUser.email || '';
-      const role = (supabaseUser.user_metadata?.role as UserRole) || 'contractor';
-      const firstName = supabaseUser.user_metadata?.first_name || '';
-      const lastName = supabaseUser.user_metadata?.last_name || '';
-      const organizationName = supabaseUser.user_metadata?.organization_name || '';
+      const userMeta = supabaseUser.user_metadata || {};
+      
+      const firstName = userMeta.first_name || '';
+      const lastName = userMeta.last_name || '';
+      const role = (userMeta.role as UserRole) || 'contractor';
+      const organizationName = userMeta.organization_name || '';
       const firstTimeLogin = isFirstLogin(supabaseUser);
       
       // Get tutorial completion status from localStorage
@@ -128,80 +130,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const onboardingKey = `${email}_onboarding_complete`;
       const hasCompletedOnboarding = localStorage.getItem(onboardingKey) === 'true';
       
-      // Construct a user object from auth data only
-      const userFromAuth = {
+      // Create user object from auth data
+      const userFromAuth: User = {
         id: supabaseUser.id,
         name: `${firstName} ${lastName}`.trim() || email.split('@')[0] || 'User',
         email,
         role,
-        // These fields would normally come from the database
-        organizationId: undefined,
         organizationName,
         // Director needs onboarding only on first login and if it hasn't been completed
         needsOnboarding: role === 'director' && firstTimeLogin && !hasCompletedOnboarding,
         hasCompletedTutorial
       };
       
-      // Try to get additional user data from the database
-      try {
-        const { data, error } = await supabase
-          .from('users')
-          .select(`
-            id, 
-            first_name, 
-            last_name, 
-            email, 
-            role,
-            organization_id,
-            organizations:organization_id (name)
-          `)
-          .eq('email', email)
-          .maybeSingle();
-
-        if (error) {
-          console.error('Error fetching user profile:', error);
-          // Fall back to auth data if we can't access the database
-          setUser(userFromAuth);
-        } else if (data) {
-          // Check if a director needs onboarding (no organization or no backup director set)
-          let needsOnboarding = false;
-          
-          if (data.role === 'director' && firstTimeLogin && !hasCompletedOnboarding) {
-            // Check if the organization has a backup_director_id set
-            if (data.organization_id) {
-              const { data: orgData, error: orgError } = await supabase
-                .from('organizations')
-                .select('backup_director_id')
-                .eq('id', data.organization_id)
-                .single();
-              
-              if (orgError || !orgData.backup_director_id) {
-                needsOnboarding = true;
-              }
-            } else {
-              needsOnboarding = true;
-            }
-          }
-          
-          setUser({
-            id: data.id.toString(),
-            name: `${data.first_name || ''} ${data.last_name || ''}`.trim() || email.split('@')[0] || 'User',
-            email: data.email,
-            role: data.role as UserRole || role,
-            organizationId: data.organization_id,
-            organizationName: data.organizations?.name || organizationName,
-            needsOnboarding,
-            hasCompletedTutorial
-          });
-        } else {
-          // No user found in database, use auth data
-          setUser(userFromAuth);
-        }
-      } catch (dbError) {
-        console.error('Failed to fetch from database:', dbError);
-        setUser(userFromAuth);
-      }
-      
+      setUser(userFromAuth);
       setIsLoading(false);
     } catch (error) {
       console.error('Failed to process user data:', error);
@@ -256,20 +197,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       
       if (error) {
         throw error;
-      }
-
-      // If the user is a director and they provided an organization name, create it
-      if (role === 'director' && organizationName && data.user) {
-        try {
-          // Create organization record using edge function or direct insert
-          // This is where we would create the organization for the director
-          console.log('Would create organization:', organizationName, 'for user:', data.user.id);
-          
-          // In a real implementation, we would use an edge function or RLS policy
-        } catch (orgError) {
-          console.error('Failed to create organization:', orgError);
-          // Continue even if org creation fails, as user is still registered
-        }
       }
 
       toast.success('Registration successful! Please check your email to verify your account.');

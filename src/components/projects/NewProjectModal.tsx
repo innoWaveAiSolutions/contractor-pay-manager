@@ -5,7 +5,6 @@ import { CustomButton } from '@/components/ui/custom-button';
 import { useApi } from '@/hooks/use-api';
 import { toast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 
 interface NewProjectModalProps {
@@ -38,6 +37,10 @@ const NewProjectModal = ({ isOpen, onClose, onSuccess }: NewProjectModalProps) =
     
     try {
       setIsLoading(true);
+      
+      if (!formData.name) {
+        throw new Error('Project name is required');
+      }
       
       // Use the createProject method from the API hook
       const result = await createProject(formData);
