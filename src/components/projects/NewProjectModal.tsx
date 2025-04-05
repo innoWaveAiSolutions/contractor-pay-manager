@@ -42,6 +42,10 @@ const NewProjectModal = ({ isOpen, onClose, onSuccess }: NewProjectModalProps) =
         throw new Error('Project name is required');
       }
       
+      if (!user) {
+        throw new Error('You must be logged in to create a project');
+      }
+      
       // Use the createProject method from the API hook
       const result = await createProject(formData);
 

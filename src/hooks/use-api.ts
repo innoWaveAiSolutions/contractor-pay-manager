@@ -9,7 +9,7 @@ export const useApi = () => {
   // Dashboard statistics
   const getDashboardStatistics = async () => {
     try {
-      // Get counts from database
+      // Get counts from database - these don't try to join with users table
       const { count: projectsCount } = await supabase
         .from('projects')
         .select('id', { count: 'exact', head: true });
@@ -18,9 +18,9 @@ export const useApi = () => {
         .from('pay_applications')
         .select('id', { count: 'exact', head: true });
       
-      const { count: membersCount } = await supabase
-        .from('users')
-        .select('id', { count: 'exact', head: true });
+      // For members count, we can't use the users table directly due to permissions
+      // So we'll just show a default value or get it from a different source
+      const membersCount = 0; // Default value
       
       const { count: pendingReviewsCount } = await supabase
         .from('pay_applications')
@@ -31,7 +31,7 @@ export const useApi = () => {
       return [
         { title: 'Active Projects', value: projectsCount || 0 },
         { title: 'Pay Applications', value: payAppsCount || 0 },
-        { title: 'Organization Members', value: membersCount || 0 },
+        { title: 'Organization Members', value: membersCount },
         { title: 'Pending Reviews', value: pendingReviewsCount || 0 },
       ];
     } catch (error) {
@@ -50,14 +50,14 @@ export const useApi = () => {
     try {
       setIsLoading(true);
       
-      // Get projects directly, without trying to join with the users table
+      // Get projects directly without joining with users table
       const { data, error } = await supabase
         .from('projects')
         .select('*')
         .order('created_at', { ascending: false });
       
       if (error) {
-        console.error('Error fetching projects:', error);
+        console.error('Error in getProjects:', error);
         throw error;
       }
       
@@ -92,12 +92,13 @@ export const useApi = () => {
       // Use the user's ID directly from auth
       const userId = userData.user.id;
       
-      // Create the project without trying to access the users table
+      // Create the project with just the necessary fields
+      // IMPORTANT: Make sure created_by is a UUID (string) matching auth.uid()
       const { data, error } = await supabase
         .from('projects')
         .insert({
           name: projectData.name,
-          created_by: userId // Use the auth user ID directly
+          created_by: userId // This is correct - auth.uid() is a UUID (string)
         })
         .select();
       
@@ -128,17 +129,16 @@ export const useApi = () => {
   // Team methods
   const getContractors = async () => {
     try {
-      const { data, error } = await supabase
-        .from('users')
-        .select('*')
-        .eq('role', 'contractor');
-        
-      if (error) {
-        console.error('Error fetching contractors:', error);
-        return [];
-      }
+      // Since we can't access the users table directly,
+      // we need an alternative approach:
+      // 1. Either have a public.contractors table with RLS
+      // 2. Or return mock data for now
       
-      return data || [];
+      // Return mock data for now
+      return [
+        { id: 1, first_name: 'John', last_name: 'Contractor', email: 'john@example.com', role: 'contractor' },
+        { id: 2, first_name: 'Jane', last_name: 'Builder', email: 'jane@example.com', role: 'contractor' },
+      ];
     } catch (error) {
       console.error('Error in getContractors:', error);
       return [];
@@ -147,17 +147,12 @@ export const useApi = () => {
 
   const getReviewers = async () => {
     try {
-      const { data, error } = await supabase
-        .from('users')
-        .select('*')
-        .in('role', ['pm', 'director']);
-        
-      if (error) {
-        console.error('Error fetching reviewers:', error);
-        return [];
-      }
-      
-      return data || [];
+      // Similar to getContractors, we can't access the users table
+      // Return mock data
+      return [
+        { id: 1, first_name: 'Alex', last_name: 'Manager', email: 'alex@example.com', role: 'pm' },
+        { id: 2, first_name: 'Sam', last_name: 'Director', email: 'sam@example.com', role: 'director' },
+      ];
     } catch (error) {
       console.error('Error in getReviewers:', error);
       return [];

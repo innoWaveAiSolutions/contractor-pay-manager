@@ -53,7 +53,7 @@ const Projects = () => {
       setError('Could not load projects due to a permission or connection issue.');
       toast({
         title: "Error loading projects",
-        description: "Could not load your projects. Please try again later.",
+        description: error.message || "Could not load your projects. Please try again later.",
         variant: "destructive",
       });
       setLoadingTimedOut(true);
